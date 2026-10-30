@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+</head>
+<body>
+<title>Upkeep</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=DM+Mono:wght@400;500&family=Figtree:wght@400..700&display=swap">
+<style>
+/* Layout: one app shell. Five sections behind a bottom bar (side rail on wide screens). Content is stacked cards in a 760px column; every editor opens as a sheet. */
+:root{
+  --bg:#f1f4f3;--surface:#ffffff;--surface-2:#e6ebea;--line:#d6dedd;--fg:#13201f;--muted:#566967;
+  --accent-l:#0e7c7b;--accent-d:#52d3c6;--accent:var(--accent-l);--on-accent:#ffffff;
+  --good:#287f52;--warn:#9a6208;--bad:#bb372a;
+  --shadow:0 1px 2px rgba(10,30,28,.05),0 8px 20px rgba(10,30,28,.05);
+  --f-display:'Bricolage Grotesque','Avenir Next',system-ui,sans-serif;
+  --f-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'DM Mono',ui-monospace,Menlo,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1415;--surface:#152021;--surface-2:#1d2b2c;--line:#2a3b3c;--fg:#e7f0ef;--muted:#8ea3a1;
+  --accent:var(--accent-d);--on-accent:#091213;--good:#5cc98d;--warn:#e3b04f;--bad:#ff8173;--shadow:none;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1415;--surface:#152021;--surface-2:#1d2b2c;--line:#2a3b3c;--fg:#e7f0ef;--muted:#8ea3a1;
+  --accent:var(--accent-d);--on-accent:#091213;--good:#5cc98d;--warn:#e3b04f;--bad:#ff8173;--shadow:none;color-scheme:dark}
+:root[data-skin="ember"]{--accent-l:#b93d0a;--accent-d:#ff9a57}
+:root[data-skin="moss"]{--accent-l:#3b7a35;--accent-d:#93d886}
+:root[data-skin="plum"]{--accent-l:#7a37ad;--accent-d:#cbaaf7}
+:root[data-skin="ink"]{--accent-l:#26394f;--accent-d:#c9d6e4}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 calc(92px + env(safe-area-inset-bottom,0px));min-height:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:30}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.15;text-wrap:balance;font-weight:650}
+h1{font-size:28px;letter-spacing:-.01em}h2{font-size:20px}h3{font-size:17px}
+p{margin:0}
+button{font-family:inherit}
+#app{max-width:760px;margin:0 auto}
+#top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);display:flex;align-items:center;gap:10px;padding-block:14px 10px}
+#view{display:flex;flex-direction:column;gap:14px;padding-bottom:8px}
+.eyebrow{font:500 11px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}.small{font-size:12.5px}.center{text-align:center}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.grow{flex:1;min-width:0}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:10px;align-items:center}.row.wrap{flex-wrap:wrap}.between{justify-content:space-between}
+.cols{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.card.stack{gap:10px}
+.empty{text-align:left;display:flex;flex-direction:column;gap:10px}
+.sk{height:96px;border-radius:var(--r);background:var(--surface-2)}
+.pill{display:inline-block;font:600 11px var(--f-body);padding:2px 9px;border-radius:99px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.pill.good{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.pill.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.pill.acc{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.btn{font:600 14px var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:8px 14px;border-radius:11px;cursor:pointer;min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.ghost{background:transparent}.btn.danger{color:var(--bad)}
+.btn.sm{padding:4px 11px;min-height:32px;font-size:13px}
+.btn:focus-visible,.chip:focus-visible,.tile:focus-visible,.chk:focus-visible,.seg button:focus-visible,#nav button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:6px 13px;border-radius:99px;font:500 13px var(--f-body);cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;color:var(--muted);font:600 13px var(--f-body);padding:8px 6px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--fg);box-shadow:var(--shadow)}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 11px;width:100%;min-height:40px}
+textarea{min-height:92px;resize:vertical}
+input[type=checkbox]{width:auto;min-height:0}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted);font-weight:500}
+.fields{display:grid;gap:12px}
+.two{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:620px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tile{position:relative;display:flex;flex-direction:column;text-align:left;padding:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface);color:inherit;font:inherit;cursor:pointer}
+.tile .ph{display:grid;place-items:center;aspect-ratio:4/3;background:var(--surface-2);overflow:hidden}
+.tile .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.tile .ini{font:700 34px var(--f-display);color:var(--muted)}
+.tile .tb{display:flex;flex-direction:column;gap:2px;padding:9px 11px;min-width:0}
+.tile .tb b{overflow-wrap:anywhere;font-weight:600}
+.star{position:absolute;top:8px;right:8px;background:var(--bg);color:var(--accent);border-radius:99px;font-size:13px;padding:1px 7px}
+.badge{position:absolute;top:8px;left:8px}
+.x{border:0;background:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;width:34px;height:36px}
+.bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
+.chk{display:flex;gap:12px;align-items:center;width:100%;padding:11px 0;border:0;border-bottom:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.chk:last-child{border-bottom:0}
+.box{flex:0 0 auto;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--line);display:grid;place-items:center;color:var(--on-accent)}
+.box svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0}
+.chk.on .box{background:var(--accent);border-color:var(--accent)}.chk.on .box svg{opacity:1}
+.chk.on .lbl{color:var(--muted);text-decoration:line-through}
+.heat{display:grid;grid-template-columns:repeat(var(--cols,15),1fr);grid-template-rows:repeat(7,auto);grid-auto-flow:column;gap:3px}
+.heat i{display:block;aspect-ratio:1;border-radius:3px;background:var(--surface-2)}
+.heat i.l1{background:color-mix(in srgb,var(--accent) 30%,var(--surface-2))}
+.heat i.l2{background:color-mix(in srgb,var(--accent) 55%,var(--surface-2))}
+.heat i.l3{background:color-mix(in srgb,var(--accent) 78%,var(--surface-2))}
+.heat i.l4{background:var(--accent)}
+.heat i.fut{visibility:hidden}.heat i.today{outline:1.5px solid var(--fg);outline-offset:1px}
+.big{font:700 40px/1 var(--f-display)}
+.stat{display:flex;flex-direction:column;gap:2px;background:var(--surface-2);border-radius:12px;padding:9px 11px}
+.stat b{font:500 18px var(--f-mono)}
+.stats{display:grid;gap:8px;grid-template-columns:repeat(4,1fr)}
+.stepper{display:inline-flex;align-items:center;gap:10px}
+.stepper button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font-size:18px;cursor:pointer}
+.ing{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ing-a{display:grid;grid-template-columns:62px 74px minmax(0,1fr) 34px;gap:6px;align-items:center}
+.ing-b{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ing input{padding:6px 8px;min-height:36px;font-size:14px}
+.ilist{list-style:none;margin:0;padding:0}
+.ilist li{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.ilist .q{flex:0 0 78px;color:var(--muted)}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.cover{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:12px;display:block;background:var(--surface-2)}
+.timer{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cookstep{font:500 24px/1.35 var(--f-display);text-wrap:pretty}
+.dots{display:flex;gap:5px}.dots i{flex:1;height:4px;border-radius:9px;background:var(--surface-2)}.dots i.on{background:var(--accent)}
+.sets{display:flex;flex-direction:column;gap:7px}
+.set{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,1fr) 44px 28px;gap:8px;align-items:center}
+.set.hd{font:500 11px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.set .sn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:13px;color:var(--muted)}
+.set em{font:700 9px var(--f-body);font-style:normal;background:var(--accent);color:var(--on-accent);border-radius:5px;padding:1px 4px}
+.set input{text-align:center;font-family:var(--f-mono)}
+.tick{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;display:grid;place-items:center}
+.tick svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.set.done .tick{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.set.done input{opacity:.65}
+.rest{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:10px;background:var(--accent);color:var(--on-accent);border-radius:12px;padding:8px 12px;margin-bottom:10px}
+.rest .btn{background:transparent;color:var(--on-accent);border-color:color-mix(in srgb,var(--on-accent) 45%,transparent)}
+.ch{width:100%;height:auto;display:block}
+.ch text{fill:var(--muted);font:10px var(--f-mono)}
+.ch .gl{stroke:var(--line);stroke-width:1;fill:none}
+.ch .ln{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round}
+.ch .ar{fill:color-mix(in srgb,var(--accent) 14%,transparent);stroke:none}
+.ch circle{fill:var(--accent);stroke:var(--surface);stroke-width:1.5}
+.ch .lv{fill:var(--fg);font-weight:500}
+.pv{border-radius:12px;background:var(--surface-2);min-height:120px;display:grid;place-items:center;overflow:hidden}
+.pv img{width:100%;max-height:260px;object-fit:cover;display:block}
+.photo{display:flex;flex-direction:column;gap:8px}
+.sw{width:32px;height:32px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0;flex:0 0 auto}
+.sw.on{outline:2px solid var(--accent);outline-offset:2px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;border:1px solid var(--line);vertical-align:-1px;margin-right:4px}
+.collage{display:grid;grid-template-columns:1fr 1fr;gap:2px;aspect-ratio:4/3;background:var(--surface-2);overflow:hidden}
+.collage span{display:block;overflow:hidden;background:var(--surface-2)}
+.collage img{width:100%;height:100%;object-fit:cover;display:block}
+.picks{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px}
+.pick{flex:0 0 auto;width:72px;border:2px solid transparent;border-radius:12px;background:var(--surface);padding:0;cursor:pointer;overflow:hidden;color:inherit;font:inherit;text-align:center}
+.pick .pi{display:block;aspect-ratio:1;background:var(--surface-2);overflow:hidden}
+.pick img{width:100%;height:100%;object-fit:cover;display:block}
+.pick small{display:block;font-size:10.5px;padding:3px 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick.on{border-color:var(--accent)}
+.pick.match:not(.on){border-color:color-mix(in srgb,var(--good) 55%,transparent)}
+.rowitem{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:inherit;font:inherit;cursor:pointer}
+.thumb{flex:0 0 auto;width:48px;height:48px;border-radius:10px;overflow:hidden;background:var(--surface-2);display:grid;place-items:center}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px}.kv dt{color:var(--muted)}.kv dd{margin:0;text-align:right;overflow-wrap:anywhere}
+.cmp{display:grid;gap:8px;grid-template-columns:1fr 1fr}.cmp img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;display:block}
+.daycard.today{border-color:var(--accent)}
+
+#nav{position:fixed;left:0;right:0;bottom:0;z-index:25;display:flex;justify-content:center;gap:4px;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:6px max(10px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+#nav button{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;color:var(--muted);font:500 11px var(--f-body);padding:6px 4px;border-radius:12px;cursor:pointer}
+#nav svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#nav button[aria-current="page"]{color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+@media(min-width:900px){
+  body{padding-left:calc(max(16px,env(safe-area-inset-left,0px)) + 92px);padding-block:0 40px}
+  #nav{right:auto;top:0;bottom:0;width:88px;flex-direction:column;justify-content:flex-start;gap:6px;border-top:0;border-right:1px solid var(--line);
+    padding:calc(20px + env(safe-area-inset-top,0px)) 8px 20px max(8px,env(safe-area-inset-left,0px))}
+  #nav button{flex:0 0 auto;max-width:none}
+}
+#sheet{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+#sheet .bd{position:absolute;inset:0;background:rgba(6,14,14,.55)}
+#sheet .panel{position:relative;width:100%;max-width:640px;max-height:92%;background:var(--bg);border-radius:20px 20px 0 0;display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+#sheet .panel.full{height:96%}
+#sheet .sh{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px))}
+#sheet .pb{overflow-y:auto;flex:1;min-height:0;padding:6px max(16px,env(safe-area-inset-right,0px)) 18px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+#sheet .pf{display:flex;gap:10px;flex-wrap:wrap;padding:10px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid var(--line);background:var(--bg)}
+#sheet .pf .btn{flex:1}
+@media(min-width:700px){#sheet{align-items:center}#sheet .panel{border-radius:20px;max-height:88%}#sheet .panel.full{height:88%}}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(98px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:99px;font:600 13px var(--f-body);max-width:90%;text-align:center}
+@media(min-width:900px){#toast{bottom:40px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app">
+  <header id="top">
+    <div class="grow"><div class="eyebrow">Upkeep</div><h1 id="title">Today</h1></div>
+    <span id="sync" class="pill">Loading</span>
+    <button class="btn ghost sm" data-act="settings" aria-label="Settings">Settings</button>
+  </header>
+  <main id="view"></main>
+</div>
+<nav id="nav" aria-label="Sections"></nav>
+<div id="sheet" hidden></div>
+<div id="toast" hidden></div>
+<datalist id="units"><option value="g"><option value="kg"><option value="ml"><option value="l"><option value="tsp"><option value="tbsp"><option value="cup"><option value="pc"><option value="pinch"></datalist>
+<datalist id="exlist"></datalist>
+
+<script>
+(function(){
+'use strict';
+/* ================= helpers ================= */
+var root=document.documentElement;
+var $=function(s,r){return (r||document).querySelector(s)};
+var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var uid=function(){return Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4)};
+var pad=function(n){return String(n).padStart(2,'0')};
+var dkey=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+var fromKey=function(k){var p=String(k).split('-').map(Number);return new Date(p[0],p[1]-1,p[2],12)};
+var todayK=function(){return dkey(new Date())};
+var addDays=function(k,n){var d=fromKey(k);d.setDate(d.getDate()+n);return dkey(d)};
+var diffDays=function(a,b){return Math.round((fromKey(b)-fromKey(a))/864e5)};
+var weekStart=function(k){return addDays(k,-((fromKey(k).getDay()+6)%7))};
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+var MON_FIRST=[1,2,3,4,5,6,0];
+var fmtDate=function(k,o){return fromKey(k).toLocaleDateString(undefined,o||{day:'numeric',month:'short'})};
+var num=function(v){var n=parseFloat(v);return isFinite(n)?n:0};
+var r1=function(n){return Math.round(n*10)/10};
+var fmtQ=function(q){return q==null||q===''?'':String(Math.round(num(q)*100)/100)};
+var mmss=function(s){return Math.floor(s/60)+':'+pad(s%60)};
+var lsGet=function(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}};
+var lsSet=function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}};
+var lsDel=function(k){try{localStorage.removeItem(k)}catch(e){}};
+var ago=function(k){var d=diffDays(k,todayK());return d<=0?'today':d===1?'yesterday':d+' d ago'};
+var byDateDesc=function(a,b){return a.date<b.date?1:a.date>b.date?-1:((b.at||0)-(a.at||0))};
+var byDateAsc=function(a,b){return byDateDesc(b,a)};
+var TICK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+/* ================= state + storage ================= */
+var COLS=['recipes','plan','cooked','templates','sessions','body','items','outfits','wears','routines','checks','products','groom','reminders','photos','meta'];
+var S={};COLS.forEach(function(c){S[c]={}});
+var list=function(c){return Object.keys(S[c]).map(function(k){return S[c][k]})};
+var base=null,mode='local',ready=false,writeFail=false,queues={};
+
+function persist(col,id,obj){
+  if(mode==='cloud'){
+    var key=col+'/'+id;
+    queues[key]=(queues[key]||Promise.resolve()).then(function(){
+      var ref=base.collection(col).doc(id);
+      var p=obj?ref.set(JSON.parse(JSON.stringify(obj))):ref.delete();
+      return p.then(function(){if(writeFail){writeFail=false;syncChip()}});
+    }).catch(function(e){
+      writeFail=true;syncChip();
+      toast(e&&e.code==='quota_exceeded'?'Storage is full. Delete some photos.':'Could not save. This page needs Contributor access to store your data.');
+    });
+  }else saveLocal();
+}
+function put(col,obj){var o=Object.assign({},obj);if(!o.id)o.id=uid();var m=Object.assign({},S[col]);m[o.id]=o;S[col]=m;persist(col,o.id,o);schedule();return o.id}
+function del(col,id){var m=Object.assign({},S[col]);delete m[id];S[col]=m;persist(col,id,null);schedule()}
+var lt=null;
+function saveLocal(){clearTimeout(lt);lt=setTimeout(function(){if(!lsSet('upkeep.data.v1',S)&&!writeFail){writeFail=true;syncChip();toast('This device is out of storage space.')}},300)}
+
+function setReady(){if(ready)return;ready=true;schedule()}
+function initStore(){
+  var p;
+  try{p=(window.claude&&window.claude.use)?Promise.all([window.claude.use('db'),window.claude.use('user')]):Promise.resolve([null,null])}catch(e){p=Promise.resolve([null,null])}
+  p.then(function(r){
+    var db=r[0],user=r[1];
+    return (user?user.id():Promise.resolve(null)).then(function(id){return [db,id]});
+  }).catch(function(){return [null,null]}).then(function(r){
+    var db=r[0],id=r[1];
+    if(db&&id){
+      base=db.doc('data/users/'+id+'/app');mode='cloud';
+      var pend=COLS.length,seen={};
+      var done=function(c){if(!seen[c]){seen[c]=1;pend--;if(pend<=0)setReady()}};
+      COLS.forEach(function(c){
+        base.collection(c).onSnapshot(function(snap){
+          var m={};snap.docs.forEach(function(d){m[d.id]=Object.assign({},d.data(),{id:d.id})});S[c]=m;
+          if(!snap.metadata.fromCache)done(c);
+          if(c==='meta')applyTheme();
+          schedule();
+        },function(){done(c)});
+      });
+      setTimeout(setReady,3500);
+    }else{
+      var d=lsGet('upkeep.data.v1');if(d)COLS.forEach(function(c){S[c]=d[c]||{}});
+      mode='local';setReady();
+    }
+    syncChip();
+  });
+}
+function syncChip(){
+  var el=$('#sync');if(!el)return;
+  var t,c='pill';
+  if(!ready){t='Loading'}else if(mode==='cloud'){if(writeFail){t='Not saving';c+=' bad'}else{t='Synced';c+=' good'}}else{t='This device only';c+=' warn'}
+  el.className=c;el.textContent=t;
+}
+
+/* ================= settings + theme ================= */
+var cfg=function(){return S.meta.settings||{}};
+var SKINS={ocean:'#0e7c7b',ember:'#b93d0a',moss:'#3b7a35',plum:'#7a37ad',ink:'#26394f'};
+function applyTheme(){
+  var c=cfg(),L=lsGet('upkeep.theme')||{};
+  var skin=c.skin||L.skin||'ocean',m=c.mode||L.mode||'system';
+  root.setAttribute('data-skin',skin);
+  if(m==='system')root.removeAttribute('data-theme');else root.setAttribute('data-theme',m);
+}
+function setCfg(p){
+  var c=Object.assign({},cfg(),p,{id:'settings'});put('meta',c);
+  var L=lsGet('upkeep.theme')||{};['skin','mode'].forEach(function(k){if(p[k]!==undefined)L[k]=p[k]});lsSet('upkeep.theme',L);
+  applyTheme();
+}
+
+/* ================= shell: router, render, sheet, toast ================= */
+var ICON={
+  home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  cook:'<path d="M4 10h16v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/><path d="M2 10h20M9 4c0 1.5 1 1.5 1 3M14 4c0 1.5 1 1.5 1 3"/>',
+  gym:'<path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12"/>',
+  wardrobe:'<path d="M12 8a2.5 2.5 0 1 0-2.5-2.5M12 8v2L3 16.5a1.2 1.2 0 0 0 .7 2.2h16.6a1.2 1.2 0 0 0 .7-2.2L12 10"/>',
+  grooming:'<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>'
+};
+/* Adding a section later = adding one entry here plus its render function. */
+var SEC=[
+  {id:'home',label:'Today',title:'Today',render:function(){return renderHome()}},
+  {id:'cook',label:'Cookbook',title:'Cookbook',render:function(){return renderCook()}},
+  {id:'gym',label:'Gym',title:'Gym',render:function(){return renderGym()}},
+  {id:'wardrobe',label:'Wardrobe',title:'Wardrobe',render:function(){return renderWardrobe()}},
+  {id:'grooming',label:'Grooming',title:'Grooming',render:function(){return renderGrooming()}}
+];
+var ui={tab:'home',sub:{cook:'recipes',gym:'train',wardrobe:'closet',grooming:'today'},q:'',cat:'All',planWeek:0,shopDays:7,exSel:'',gcat:'All',wf:'All',wsort:'new',wq:'',shelf:'All',parea:'All'};
+var D=null,DET=null,CK=null,DR=null,PA=null,SH=null;
+
+function buildNav(){
+  $('#nav').innerHTML=SEC.map(function(s){return '<button data-act="nav" data-id="'+s.id+'" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true">'+(ICON[s.id]||'')+'</svg><span>'+esc(s.label)+'</span></button>'}).join('');
+}
+function go(tab){ui.tab=tab;try{location.hash=tab}catch(e){}paint();window.scrollTo(0,0)}
+var raf=0,dirty=false;
+function schedule(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;guardedPaint()})}
+function guardedPaint(){
+  var ae=document.activeElement;
+  if(ae&&ae!==document.body&&$('#view').contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)){dirty=true;return}
+  paint();
+}
+function paint(){
+  dirty=false;
+  var sec=SEC.filter(function(s){return s.id===ui.tab})[0]||SEC[0];
+  $('#title').textContent=sec.title;
+  $('#view').innerHTML=ready?sec.render():'<div class="sk"></div><div class="sk"></div><div class="sk"></div>';
+  $$('#nav button').forEach(function(b){b.setAttribute('aria-current',b.dataset.id===ui.tab?'page':'false')});
+  syncChip();
+}
+document.addEventListener('focusout',function(){if(dirty)setTimeout(function(){if(dirty)schedule()},60)});
+window.addEventListener('hashchange',function(){var h=location.hash.slice(1);if(h!==ui.tab&&SEC.some(function(s){return s.id===h})){ui.tab=h;paint()}});
+
+function openSheet(render,o){
+  if(SH)closeSheet();
+  SH=Object.assign({render:render},o||{});
+  $('#sheet').hidden=false;document.body.style.overflow='hidden';paintSheet();
+}
+function paintSheet(){
+  if(!SH)return;
+  var r=SH.render(),old=$('#pb'),st=old?old.scrollTop:0;
+  $('#sheet').innerHTML='<div class="bd"'+(SH.sticky?'':' data-act="close"')+'></div><div class="panel'+(SH.full?' full':'')+'" role="dialog" aria-modal="true" aria-label="'+esc(r.title)+'"><div class="sh"><h2>'+esc(r.title)+'</h2><button class="btn ghost sm" data-act="close">'+esc(SH.closeLabel||(SH.sticky?'Cancel':'Close'))+'</button></div><div class="pb" id="pb">'+r.body+'</div>'+(r.foot?'<div class="pf">'+r.foot+'</div>':'')+'</div>';
+  var nb=$('#pb');if(nb)nb.scrollTop=st;
+  if(SH.after)SH.after();
+}
+function closeSheet(){
+  if(!SH)return;var s=SH;SH=null;
+  $('#sheet').hidden=true;$('#sheet').innerHTML='';document.body.style.overflow='';
+  if(s.onClose)s.onClose();
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&SH&&!SH.sticky)closeSheet()});
+var tt=null;
+function toast(m){var el=$('#toast');el.textContent=m;el.hidden=false;clearTimeout(tt);tt=setTimeout(function(){el.hidden=true},2600)}
+function armed(el){
+  if(el.dataset.arm)return true;
+  el.dataset.arm='1';el.dataset.t=el.textContent;el.textContent='Tap again to confirm';
+  setTimeout(function(){if(el.isConnected){delete el.dataset.arm;el.textContent=el.dataset.t}},3000);
+  return false;
+}
+function copyText(t){
+  var fall=function(){openSheet(function(){return {title:'Copy this text',body:'<textarea id="cp" readonly rows="10">'+esc(t)+'</textarea>',foot:'<button class="btn primary" data-act="close">Done</button>'}});setTimeout(function(){var a=$('#cp');if(a){a.focus();a.select()}},50)};
+  try{navigator.clipboard.writeText(t).then(function(){toast('Copied')},fall)}catch(e){fall()}
+}
+
+/* shared view bits */
+function seg(key,opts,cur){return '<div class="seg" role="tablist">'+opts.map(function(o){return '<button role="tab" class="'+(o[0]===cur?'on':'')+'" data-act="sub" data-k="'+key+'" data-v="'+o[0]+'">'+esc(o[1])+'</button>'}).join('')+'</div>'}
+function chips(opts,cur,act){return '<div class="chips">'+opts.map(function(o){return '<button class="chip'+(o===cur?' on':'')+'" data-act="'+act+'" data-v="'+esc(o)+'">'+esc(o)+'</button>'}).join('')+'</div>'}
+function emptyCard(t,p,btns){return '<div class="card empty"><h3>'+esc(t)+'</h3><p class="muted">'+esc(p)+'</p><div class="row wrap">'+btns.map(function(b){return '<button class="btn '+(b[2]||'')+'" data-act="'+b[0]+'">'+esc(b[1])+'</button>'}).join('')+'</div></div>'}
+function opts(arr,cur){return arr.map(function(o){return '<option'+(o===cur?' selected':'')+'>'+esc(o)+'</option>'}).join('')}
+function imgOrInit(photo,txt,bg){return photo?'<img alt="" src="'+esc(photo)+'">':'<span class="ini"'+(bg?' style="color:'+ink(bg)+'"':'')+'>'+esc((txt||'?').charAt(0).toUpperCase())+'</span>'}
+function ink(hex){var h=hex.replace('#','');var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return (0.299*r+0.587*g+0.114*b)>150?'#14201f':'#ffffff'}
+function photoField(cur){return '<div class="photo"><div id="pv" class="pv">'+(cur?'<img alt="" src="'+esc(cur)+'">':'<span class="muted small">No photo yet</span>')+'</div><div class="row"><label class="btn sm" for="pf">'+(cur?'Change photo':'Add photo')+'</label>'+(cur?'<button class="btn sm ghost" data-act="photo-clear">Remove</button>':'')+'<input id="pf" type="file" accept="image/*" data-ch="photo" hidden></div></div>'}
+function shrink(file,max,q){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file),img=new Image();
+    img.onload=function(){
+      var k=Math.min(1,(max||560)/Math.max(img.width,img.height)),c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q||.72));
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('img'))};
+    img.src=url;
+  });
+}
+function chart(pts){
+  if(!pts.length)return '';
+  var W=320,H=160,L=38,R=14,T=14,B=24;
+  var lo=Math.min.apply(null,pts.map(function(p){return p.y})),hi=Math.max.apply(null,pts.map(function(p){return p.y}));
+  var dMin=lo,dMax=hi;if(hi-lo<1e-9){lo-=1;hi+=1}
+  var pd=(hi-lo)*.15;lo-=pd;hi+=pd;
+  var X=function(i){return pts.length===1?(L+W-R)/2:L+i*(W-L-R)/(pts.length-1)};
+  var Y=function(v){return T+(hi-v)*(H-T-B)/(hi-lo)};
+  var ticks=[dMin,(dMin+dMax)/2,dMax];if(dMax-dMin<1e-9)ticks=[dMin];
+  var grid=ticks.map(function(t){return '<path class="gl" d="M'+L+' '+Y(t).toFixed(1)+'H'+(W-R)+'"/><text x="'+(L-5)+'" y="'+(Y(t)+3).toFixed(1)+'" text-anchor="end">'+r1(t)+'</text>'}).join('');
+  var d=pts.map(function(p,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(p.y).toFixed(1)}).join('');
+  var area=pts.length>1?'<path class="ar" d="'+d+'L'+X(pts.length-1).toFixed(1)+' '+(H-B)+'L'+X(0).toFixed(1)+' '+(H-B)+'Z"/>':'';
+  var dots=pts.map(function(p,i){return '<circle cx="'+X(i).toFixed(1)+'" cy="'+Y(p.y).toFixed(1)+'" r="'+(i===pts.length-1?4.5:3)+'"/>'}).join('');
+  var last=pts[pts.length-1];
+  var lab='<text class="lv" x="'+X(pts.length-1).toFixed(1)+'" y="'+(Y(last.y)-9).toFixed(1)+'" text-anchor="end">'+r1(last.y)+'</text>';
+  var xs='<text x="'+L+'" y="'+(H-6)+'">'+esc(fmtDate(pts[0].x))+'</text>'+(pts.length>1?'<text x="'+(W-R)+'" y="'+(H-6)+'" text-anchor="end">'+esc(fmtDate(last.x))+'</text>':'');
+  return '<svg class="ch" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Trend chart">'+grid+area+(pts.length>1?'<path class="ln" d="'+d+'"/>':'')+dots+lab+xs+'</svg>';
+}
+function heat(m,weeks){
+  weeks=weeks||15;var t=todayK(),dow=(fromKey(t).getDay()+6)%7,start=addDays(t,-dow-(weeks-1)*7),h='';
+  for(var i=0;i<weeks*7;i++){var k=addDays(start,i),v=m[k]||0,fut=k>t;h+='<i class="'+(fut?'fut':'l'+Math.min(4,v))+(k===t?' today':'')+'" title="'+k+': '+v+'"></i>'}
+  return '<div class="heat" style="--cols:'+weeks+'">'+h+'</div>';
+}
+function streaks(m){
+  var days=Object.keys(m).filter(function(k){return m[k]>0}).sort(),best=0,run=0,prev=null;
+  days.forEach(function(k){run=prev&&diffDays(prev,k)===1?run+1:1;best=Math.max(best,run);prev=k});
+  var cur=0,k=todayK();if(!(m[k]>0))k=addDays(k,-1);
+  while(m[k]>0){cur++;k=addDays(k,-1)}
+  return {cur:cur,best:best};
+}
+function activity(){
+  var m={},add=function(k,n){if(k)m[k]=(m[k]||0)+n};
+  list('sessions').forEach(function(s){add(s.date,2)});
+  list('checks').forEach(function(c){if(Object.keys(c.done||{}).some(function(k){return c.done[k]}))add(c.date,1)});
+  list('wears').forEach(function(w){add(w.date,1)});
+  list('cooked').forEach(function(c){add(c.date,1)});
+  return m;
+}
+
+/* timers + audio */
+var ac=null;
+function unlockAudio(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume()}catch(e){}}
+function beep(){try{if(!ac)return;var o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=880;g.gain.value=.15;o.start();o.stop(ac.currentTime+.4);if(navigator.vibrate)navigator.vibrate(220)}catch(e){}}
+function Timer(){
+  var t={end:0,iv:null,cb:null};
+  t.running=function(){return !!t.iv};
+  t.tick=function(){
+    if(!t.end)return;
+    var l=Math.max(0,Math.ceil((t.end-Date.now())/1000));
+    if(t.cb)t.cb(l);
+    if(l<=0){clearInterval(t.iv);t.iv=null;t.end=0;beep()}
+  };
+  t.start=function(s){unlockAudio();clearInterval(t.iv);t.end=Date.now()+s*1000;t.iv=setInterval(t.tick,250);t.tick()};
+  t.add=function(s){if(t.end){t.end+=s*1000;t.tick()}};
+  t.stop=function(){clearInterval(t.iv);t.iv=null;t.end=0;if(t.cb)t.cb(null)};
+  return t;
+}
+var TM=Timer(),RT=Timer();
+var wl=null;
+function keepAwake(){try{if(navigator.wakeLock)navigator.wakeLock.request('screen').then(function(l){wl=l},function(){})}catch(e){}}
+function releaseAwake(){try{if(wl){wl.release();wl=null}}catch(e){}}
+
+/* ================= HOME ================= */
+function todaysTemplate(){
+  var dow=new Date().getDay();
+  return list('templates').filter(function(t){return (t.days||[]).indexOf(dow)>-1}).sort(function(a,b){return (a.at||0)-(b.at||0)})[0]||null;
+}
+function routineItems(kind,date){
+  var dow=fromKey(date).getDay();
+  return list('routines').filter(function(r){return r.routine===kind&&(kind!=='weekly'||r.day===dow)}).sort(function(a,b){return (a.order||0)-(b.order||0)||String(a.label).localeCompare(String(b.label))});
+}
+function routineProgress(date){
+  var done=(S.checks[date]&&S.checks[date].done)||{},out={};
+  ['am','pm','weekly'].forEach(function(k){var it=routineItems(k,date);out[k]={total:it.length,done:it.filter(function(i){return done[i.id]}).length}});
+  return out;
+}
+function remDue(r){
+  var last=r.last||null;
+  if(r.type){var lg=list('groom').filter(function(g){return g.type===r.type}).map(function(g){return g.date}).sort().pop();if(lg&&(!last||lg>last))last=lg}
+  var due=addDays(last||r.created||todayK(),num(r.every)||7);
+  return {due:due,days:diffDays(todayK(),due),last:last};
+}
+function prodExpiry(p){
+  if(p.expires)return p.expires;
+  if(p.opened&&num(p.pao)>0){var d=fromKey(p.opened);d.setMonth(d.getMonth()+num(p.pao));return dkey(d)}
+  return null;
+}
+function prodStatus(p){
+  var e=prodExpiry(p);if(!e)return null;var d=diffDays(todayK(),e);
+  return d<0?{t:'bad',s:'Expired '+(-d)+' d ago',d:d}:d<=30?{t:'warn',s:'Expires in '+d+' d',d:d}:{t:'',s:'Expires '+fmtDate(e,{month:'short',year:'numeric'}),d:d};
+}
+function attention(){
+  var out=[];
+  list('reminders').forEach(function(r){var d=remDue(r);if(d.days<=1)out.push({k:'rem',id:r.id,label:r.label,note:d.days<0?'Overdue by '+(-d.days)+' d':d.days===0?'Due today':'Due tomorrow',t:d.days<0?'bad':'warn',o:d.days})});
+  list('products').forEach(function(p){var s=prodStatus(p);if(s&&s.d<=14)out.push({k:'prod',id:p.id,label:p.name,note:s.s,t:s.t||'warn',o:s.d});else if(p.low)out.push({k:'prod',id:p.id,label:p.name,note:'Running low',t:'warn',o:5})});
+  return out.sort(function(a,b){return a.o-b.o}).slice(0,5);
+}
+function renderHome(){
+  var t=todayK(),now=new Date(),hr=now.getHours(),c=cfg();
+  var greet=hr<5?'Still up':hr<12?'Good morning':hr<17?'Good afternoon':'Good evening';
+  var act=activity(),st=streaks(act),tp=todaysTemplate();
+  var doneToday=list('sessions').filter(function(s){return s.date===t});
+  var rp=routineProgress(t),meals=(S.plan[t]&&S.plan[t].meals)||[],wear=S.wears[t],att=attention();
+  var nR=list('recipes').length,nT=list('templates').length,nG=list('routines').length,nI=list('items').length;
+  var pop=[nR,nT,nG,nI].filter(Boolean).length;
+  var h='<div><div class="eyebrow">'+DOW[now.getDay()]+' '+esc(fmtDate(t,{day:'numeric',month:'long'}))+'</div><h2>'+greet+(c.name?', '+esc(c.name):'')+'</h2></div>';
+  if(pop<2){
+    var qs=[];if(!nT)qs.push(['starter-gym','Gym split','primary']);if(!nG)qs.push(['starter-groom','Grooming routines',nT?'primary':'']);if(!nR)qs.push(['example-recipe','Example recipe']);
+    if(qs.length)h+=emptyCard('Set up Upkeep','Add a starter set for each section, then change anything you like. Your data is private to you.',qs);
+  }
+  h+='<div class="card stack"><div class="row between"><div class="row" style="align-items:baseline;gap:8px"><span class="big mono">'+st.cur+'</span><span class="muted">day streak</span></div><span class="small muted">Best '+st.best+'</span></div>'+heat(act,15)+'<div class="small muted">Last 15 weeks. Workouts, routines, outfits and cooking all count.</div></div>';
+  h+='<div class="cols">';
+  // workout
+  h+='<div class="card stack"><div class="eyebrow">Workout</div>';
+  if(DR)h+='<div class="row between"><b>'+esc(DR.name)+' in progress</b><button class="btn primary sm" data-act="wk-resume">Resume</button></div>';
+  else if(doneToday.length)h+='<b>Logged: '+esc(doneToday[0].name)+'</b><span class="small muted">'+doneToday[0].exercises.reduce(function(n,e){return n+e.sets.length},0)+' sets</span>';
+  else if(tp)h+='<b>'+esc(tp.name)+'</b><span class="small muted">'+esc((tp.ex||[]).slice(0,3).map(function(e){return e.name}).join(' · '))+'</span><div><button class="btn primary sm" data-act="wk-start" data-id="'+esc(tp.id)+'">Start</button></div>';
+  else h+='<b>Rest day</b><span class="small muted">Nothing planned for today.</span><div><button class="btn sm" data-act="wk-empty">Start empty workout</button></div>';
+  h+='</div>';
+  // routines
+  h+='<div class="card stack"><div class="row between"><div class="eyebrow">Routines</div><button class="btn ghost sm" data-act="nav" data-id="grooming">Open</button></div>';
+  var any=false;
+  [['am','Morning'],['pm','Night'],['weekly','Weekly']].forEach(function(k){var p=rp[k[0]];if(!p.total)return;any=true;h+='<div class="stack" style="gap:6px"><div class="row between small"><span>'+k[1]+'</span><span class="mono muted">'+p.done+'/'+p.total+'</span></div><div class="bar"><i style="width:'+Math.round(p.done/p.total*100)+'%"></i></div></div>'});
+  if(!any)h+='<span class="muted small">No routines yet. Add them in Grooming.</span>';
+  h+='</div>';
+  // meals
+  h+='<div class="card stack"><div class="row between"><div class="eyebrow">Meals</div><button class="btn ghost sm" data-act="plan-go">Plan</button></div>';
+  if(meals.length)meals.forEach(function(m){var r=S.recipes[m.rid];if(r)h+='<button class="chk" data-act="recipe" data-id="'+esc(r.id)+'"><span class="pill">'+esc(m.slot)+'</span><span class="lbl grow">'+esc(r.title)+'</span></button>'});
+  else h+='<span class="muted small">Nothing planned for today.</span>';
+  h+='</div>';
+  // outfit
+  h+='<div class="card stack"><div class="row between"><div class="eyebrow">Outfit</div><button class="btn ghost sm" data-act="outfit-go">Outfits</button></div>';
+  if(wear&&(wear.itemIds||[]).length){h+='<div class="row wrap">'+wear.itemIds.map(function(id){var i=S.items[id];return i?'<span class="thumb" title="'+esc(i.name)+'">'+(i.photo?'<img alt="" src="'+esc(i.photo)+'">':'<span class="dot" style="background:'+(COLORS[i.color]||'#999')+'"></span>')+'</span>':''}).join('')+'</div><span class="small muted">'+wear.itemIds.length+' pieces logged</span>'}
+  else h+='<span class="muted small">Not logged yet.</span>';
+  h+='</div>';
+  h+='</div>';
+  if(att.length){
+    h+='<div class="card stack"><div class="eyebrow">Needs attention</div>';
+    att.forEach(function(a){h+='<div class="row"><span class="grow"><b>'+esc(a.label)+'</b> <span class="pill '+a.t+'">'+esc(a.note)+'</span></span>'+(a.k==='rem'?'<button class="btn sm" data-act="rem-done" data-id="'+esc(a.id)+'">Done</button>':'<button class="btn sm ghost" data-act="prod" data-id="'+esc(a.id)+'">Open</button>')+'</div>'});
+    h+='</div>';
+  }
+  return h;
+}
+
+/* ================= COOKBOOK ================= */
+var CATS=['Breakfast','Lunch','Dinner','Snack','Drink','Dessert'],SLOTS=['Breakfast','Lunch','Dinner','Snack'];
+function recipeTotals(r){var t={kcal:0,p:0,c:0,f:0};(r.ings||[]).forEach(function(i){t.kcal+=num(i.kcal);t.p+=num(i.p);t.c+=num(i.c);t.f+=num(i.f)});var s=Math.max(1,num(r.servings)||1);return {kcal:t.kcal/s,p:t.p/s,c:t.c/s,f:t.f/s}}
+function hasMacros(r){return (r.ings||[]).some(function(i){return num(i.kcal)||num(i.p)||num(i.c)||num(i.f)})}
+function matchRecipe(r,q){
+  var terms=String(q||'').toLowerCase().split(/[,+]/).map(function(s){return s.trim()}).filter(Boolean);
+  if(!terms.length)return true;
+  var hay=[r.title,r.cat].concat(r.tags||[]).concat((r.ings||[]).map(function(i){return i.n})).join(' | ').toLowerCase();
+  return terms.every(function(t){return hay.indexOf(t)>-1});
+}
+function renderCook(){
+  var sub=ui.sub.cook;
+  return seg('cook',[['recipes','Recipes'],['plan','Plan'],['shop','Groceries']],sub)+(sub==='recipes'?cookRecipes():sub==='plan'?cookPlan():cookShop());
+}
+function cookRecipes(){
+  return '<div class="row"><input class="grow" id="rq" type="search" placeholder="Search, or list ingredients: egg, oats" data-in="rq" value="'+esc(ui.q)+'" aria-label="Search recipes"><button class="btn primary" data-act="recipe-new">New</button></div>'+chips(['All','Favourites'].concat(CATS),ui.cat,'cat')+'<div id="rlist">'+recipeGrid()+'</div>';
+}
+function recipeGrid(){
+  var all=list('recipes');
+  if(!all.length)return emptyCard('Your cookbook is empty','Add the recipes you cook, with ingredients, steps and macros. They scale by servings and feed the weekly plan and grocery list.',[['recipe-new','Add a recipe','primary'],['example-recipe','Add an example']]);
+  var rs=all.filter(function(r){return ui.cat==='All'||(ui.cat==='Favourites'?r.fav:r.cat===ui.cat)}).filter(function(r){return matchRecipe(r,ui.q)}).sort(function(a,b){return (b.at||0)-(a.at||0)});
+  if(!rs.length)return '<p class="muted center">No recipes match.</p>';
+  return '<div class="grid">'+rs.map(recipeTile).join('')+'</div>';
+}
+function recipeTile(r){
+  var t=recipeTotals(r),meta=[r.time?r.time+' min':'',hasMacros(r)?Math.round(t.kcal)+' kcal':''].filter(Boolean).join(' · ')||(r.cat||'');
+  return '<button class="tile" data-act="recipe" data-id="'+esc(r.id)+'"><span class="ph">'+imgOrInit(r.photo,r.title)+'</span>'+(r.fav?'<span class="star">★</span>':'')+'<span class="tb"><b>'+esc(r.title)+'</b><span class="small muted">'+esc(meta)+'</span></span></button>';
+}
+function openRecipe(id){var r=S.recipes[id];if(!r)return;DET={id:id,sv:num(r.servings)||1};openSheet(recipeDetail)}
+function recipeDetail(){
+  var r=S.recipes[DET.id];
+  if(!r)return {title:'Recipe',body:'<p class="muted">This recipe was removed.</p>'};
+  var b=num(r.servings)||1,k=DET.sv/b,t=recipeTotals(r);
+  var ings=(r.ings||[]).map(function(i){return '<li><span class="q mono">'+esc(((i.q!=null&&i.q!==''?fmtQ(num(i.q)*k):'')+' '+(i.u||'')).trim())+'</span><span>'+esc(i.n||'')+'</span></li>'}).join('');
+  var body=(r.photo?'<img class="cover" alt="" src="'+esc(r.photo)+'">':'')+
+   '<div class="row wrap"><span class="pill acc">'+esc(r.cat||'Recipe')+'</span>'+(r.time?'<span class="pill">'+r.time+' min</span>':'')+(r.tags||[]).map(function(x){return '<span class="pill">'+esc(x)+'</span>'}).join('')+'<button class="btn sm ghost" data-act="recipe-fav" style="margin-left:auto">'+(r.fav?'★ Favourite':'☆ Favourite')+'</button></div>'+
+   (hasMacros(r)?'<div class="stats"><div class="stat"><span class="small muted">kcal</span><b>'+Math.round(t.kcal)+'</b></div><div class="stat"><span class="small muted">Protein</span><b>'+r1(t.p)+'g</b></div><div class="stat"><span class="small muted">Carbs</span><b>'+r1(t.c)+'g</b></div><div class="stat"><span class="small muted">Fat</span><b>'+r1(t.f)+'g</b></div></div><div class="small muted" style="margin-top:-6px">Per serving</div>':'')+
+   '<div class="row between"><h3>Ingredients</h3><span class="stepper"><button data-act="rsv" data-d="-1" aria-label="Fewer servings">−</button><span class="mono"><b>'+DET.sv+'</b> servings</span><button data-act="rsv" data-d="1" aria-label="More servings">+</button></span></div>'+
+   '<ul class="ilist">'+(ings||'<li class="muted">No ingredients listed.</li>')+'</ul>'+
+   '<h3>Method</h3>'+((r.steps||[]).length?'<ol class="steps">'+r.steps.map(function(s){return '<li>'+esc(s)+'</li>'}).join('')+'</ol>':'<p class="muted">No steps written yet.</p>')+
+   (r.notes?'<h3>Notes</h3><p style="white-space:pre-wrap">'+esc(r.notes)+'</p>':'');
+  return {title:r.title,body:body,foot:'<button class="btn primary" data-act="cook-start">Cook</button><button class="btn" data-act="plan-open" data-id="'+esc(r.id)+'">Plan</button><button class="btn" data-act="recipe-cooked">Cooked</button><button class="btn" data-act="recipe-edit">Edit</button>'};
+}
+function blankIng(){return {q:'',u:'',n:'',kcal:'',p:'',c:'',f:''}}
+function editRecipe(id){
+  var r=id?S.recipes[id]:null;
+  D=r?{id:r.id,title:r.title||'',cat:r.cat||'Dinner',servings:r.servings||1,time:r.time||'',photo:r.photo||'',fav:!!r.fav,tags:(r.tags||[]).join(', '),steps:(r.steps||[]).join('\n'),notes:r.notes||'',ings:(r.ings||[]).map(function(i){return {q:i.q==null?'':i.q,u:i.u||'',n:i.n||'',kcal:i.kcal||'',p:i.p||'',c:i.c||'',f:i.f||''}})}
+    :{title:'',cat:'Dinner',servings:1,time:'',photo:'',fav:false,tags:'',steps:'',notes:'',ings:[blankIng()]};
+  if(!D.ings.length)D.ings=[blankIng()];
+  openSheet(recipeForm,{sticky:true});
+}
+function ingRows(){
+  return D.ings.map(function(g,i){return '<div class="ing" data-i="'+i+'"><div class="ing-a"><input data-f="q" data-in="rtot" inputmode="decimal" placeholder="Qty" value="'+esc(g.q)+'" aria-label="Quantity"><input data-f="u" list="units" placeholder="Unit" value="'+esc(g.u)+'" aria-label="Unit"><input data-f="n" placeholder="Ingredient" value="'+esc(g.n)+'" aria-label="Ingredient"><button class="x" data-act="ing-del" data-i="'+i+'" aria-label="Remove ingredient">×</button></div><div class="ing-b">'+[['kcal','kcal'],['p','Protein g'],['c','Carbs g'],['f','Fat g']].map(function(m){return '<input data-f="'+m[0]+'" data-in="rtot" inputmode="decimal" placeholder="'+m[1]+'" value="'+esc(g[m[0]])+'" aria-label="'+m[1]+'">'}).join('')+'</div></div>'}).join('');
+}
+function totText(){
+  var r={servings:D.servings,ings:D.ings};
+  if(!hasMacros(r))return 'Add macros to an ingredient to see per-serving totals.';
+  var t=recipeTotals(r);return 'Per serving: '+Math.round(t.kcal)+' kcal · P '+r1(t.p)+' g · C '+r1(t.c)+' g · F '+r1(t.f)+' g';
+}
+function recipeForm(){
+  var body='<div class="fields"><label class="f">Name<input id="r-title" value="'+esc(D.title)+'" placeholder="e.g. Masala oats omelette"></label>'+
+   '<div class="two"><label class="f">Category<select id="r-cat">'+opts(CATS,D.cat)+'</select></label><label class="f">Time (min)<input id="r-time" inputmode="numeric" value="'+esc(D.time)+'"></label></div>'+
+   '<div class="two"><label class="f">Makes (servings)<input id="r-sv" data-in="rtot" inputmode="decimal" value="'+esc(D.servings)+'"></label><label class="f">Tags<input id="r-tags" value="'+esc(D.tags)+'" placeholder="high-protein, quick"></label></div>'+
+   photoField(D.photo)+
+   '<div><h3>Ingredients</h3><p class="small muted">Macros are for the whole quantity in that row.</p><div id="ings">'+ingRows()+'</div><button class="btn sm" data-act="ing-add" style="margin-top:10px">+ Add ingredient</button></div>'+
+   '<div class="card small" id="tot">'+esc(totText())+'</div>'+
+   '<label class="f">Method (one step per line; add "(10 min)" to get a timer)<textarea id="r-steps" rows="6">'+esc(D.steps)+'</textarea></label>'+
+   '<label class="f">Notes<textarea id="r-notes" rows="3">'+esc(D.notes)+'</textarea></label>'+
+   (D.id?'<button class="btn danger" data-act="recipe-del">Delete recipe</button>':'')+'</div>';
+  return {title:D.id?'Edit recipe':'New recipe',body:body,foot:'<button class="btn primary" data-act="recipe-save">Save recipe</button>'};
+}
+function collectRecipe(){
+  var g=function(id){var e=$('#'+id);return e?e.value:''};
+  D.title=g('r-title');D.cat=g('r-cat');D.servings=g('r-sv');D.time=g('r-time');D.tags=g('r-tags');D.steps=g('r-steps');D.notes=g('r-notes');
+  D.ings=$$('#ings .ing').map(function(row){var o={};$$('[data-f]',row).forEach(function(i){o[i.dataset.f]=i.value});return o});
+}
+function stepSeconds(s){
+  var m=String(s).match(/(\d+(?:\.\d+)?)\s*(?:-\s*\d+(?:\.\d+)?\s*)?(hours?|hrs?|minutes?|mins?|seconds?|secs?)\b/i);
+  if(!m)return 0;var n=parseFloat(m[1]),u=m[2].toLowerCase();
+  return Math.round(n*(u[0]==='h'?3600:u[0]==='m'?60:1));
+}
+function cookView(){
+  var r=S.recipes[CK.id];
+  if(!r)return {title:'Cook',body:'<p class="muted">Recipe not found.</p>'};
+  var steps=(r.steps&&r.steps.length)?r.steps:['No steps written yet. Edit the recipe to add them.'];
+  var i=Math.min(CK.i,steps.length-1),s=steps[i],sec=stepSeconds(s),k=CK.sv/(num(r.servings)||1);
+  var ings=(r.ings||[]).map(function(g){return '<li><span class="q mono">'+esc(((g.q!=null&&g.q!==''?fmtQ(num(g.q)*k):'')+' '+(g.u||'')).trim())+'</span><span>'+esc(g.n||'')+'</span></li>'}).join('');
+  var dots='<div class="dots">'+steps.map(function(_,j){return '<i class="'+(j<=i?'on':'')+'"></i>'}).join('')+'</div>';
+  var body=dots+'<div class="small muted mono">Step '+(i+1)+' of '+steps.length+'</div><p class="cookstep">'+esc(s)+'</p>'+
+    '<div class="timer">'+(sec?'<button class="btn" data-act="cook-timer" data-s="'+sec+'">Start '+mmss(sec)+' timer</button>':'')+'<span id="tmr" class="mono" style="font-size:22px"></span>'+(sec||TM.running()?'<button class="btn ghost sm" data-act="cook-timer-stop">Stop</button>':'')+'</div>'+
+    '<details class="card"><summary><b>Ingredients for '+CK.sv+' servings</b></summary><ul class="ilist" style="margin-top:8px">'+ings+'</ul></details>';
+  var last=i>=steps.length-1;
+  return {title:r.title,body:body,foot:'<button class="btn" data-act="cook-step" data-d="-1"'+(i===0?' disabled':'')+'>Back</button>'+(last?'<button class="btn primary" data-act="cook-done">Finish and log as cooked</button>':'<button class="btn primary" data-act="cook-step" data-d="1">Next step</button>')};
+}
+function openPlanAdd(date,rid){
+  var h=new Date().getHours();
+  PA={date:date||todayK(),rid:rid||'',slot:h<11?'Breakfast':h<16?'Lunch':h<21?'Dinner':'Snack'};
+  openSheet(function(){
+    var rs=list('recipes').sort(function(a,b){return String(a.title).localeCompare(String(b.title))});
+    if(!rs.length)return {title:'Add to plan',body:'<p class="muted">Add a recipe first.</p>'};
+    return {title:'Add to plan',body:'<div class="fields"><label class="f">Recipe<select id="pa-r">'+rs.map(function(r){return '<option value="'+esc(r.id)+'"'+(r.id===PA.rid?' selected':'')+'>'+esc(r.title)+'</option>'}).join('')+'</select></label><div class="two"><label class="f">Day<input id="pa-d" type="date" value="'+PA.date+'"></label><label class="f">Meal<select id="pa-s">'+opts(SLOTS,PA.slot)+'</select></label></div><label class="f">Portions you will eat<input id="pa-p" inputmode="decimal" value="1"></label></div>',foot:'<button class="btn primary" data-act="plan-save">Add to plan</button>'};
+  },{sticky:true});
+}
+function cookPlan(){
+  var ws=addDays(weekStart(todayK()),ui.planWeek*7),t=todayK();
+  var h='<div class="row between"><button class="btn sm" data-act="plan-wk" data-d="-1">Previous</button><b class="mono">'+esc(fmtDate(ws))+' – '+esc(fmtDate(addDays(ws,6)))+'</b><button class="btn sm" data-act="plan-wk" data-d="1">Next</button></div>';
+  for(var i=0;i<7;i++){
+    var k=addDays(ws,i),meals=((S.plan[k]&&S.plan[k].meals)||[]).slice().sort(function(a,b){return SLOTS.indexOf(a.slot)-SLOTS.indexOf(b.slot)});
+    var kc=0,pr=0;meals.forEach(function(m){var r=S.recipes[m.rid];if(r){var tt=recipeTotals(r);kc+=tt.kcal*num(m.sv||1);pr+=tt.p*num(m.sv||1)}});
+    h+='<div class="card stack daycard'+(k===t?' today':'')+'"><div class="row between"><b>'+DOW[fromKey(k).getDay()]+' '+esc(fmtDate(k))+(k===t?' <span class="pill acc">Today</span>':'')+'</b>'+(kc?'<span class="small muted mono">'+Math.round(kc)+' kcal · '+Math.round(pr)+' g protein</span>':'')+'</div>';
+    meals.forEach(function(m){var r=S.recipes[m.rid];h+='<div class="row"><span class="pill">'+esc(m.slot)+'</span><button class="chk grow" style="border:0;padding:4px 0" data-act="recipe" data-id="'+esc(m.rid)+'"><span class="lbl">'+esc(r?r.title:'Removed recipe')+(num(m.sv||1)!==1?' ×'+num(m.sv):'')+'</span></button><button class="x" data-act="plan-del" data-date="'+k+'" data-mid="'+esc(m.id)+'" aria-label="Remove from plan">×</button></div>'});
+    h+='<div><button class="btn sm" data-act="plan-open" data-date="'+k+'">+ Add meal</button></div></div>';
+  }
+  return h;
+}
+function groceryList(days){
+  var t=todayK(),map={};
+  for(var i=0;i<days;i++){
+    var k=addDays(t,i);
+    ((S.plan[k]&&S.plan[k].meals)||[]).forEach(function(m){
+      var r=S.recipes[m.rid];if(!r)return;var sc=num(m.sv||1)/(num(r.servings)||1);
+      (r.ings||[]).forEach(function(g){
+        var nm=String(g.n||'').trim();if(!nm)return;var u=String(g.u||'').trim(),key=nm.toLowerCase()+'|'+u.toLowerCase();
+        var e=map[key]||(map[key]={key:key,n:nm,u:u,q:0,has:false});
+        if(g.q!=null&&g.q!==''){e.q+=num(g.q)*sc;e.has=true}
+      });
+    });
+  }
+  return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return a.n.localeCompare(b.n)});
+}
+function cookShop(){
+  var items=groceryList(ui.shopDays),ck=(S.meta.grocery&&S.meta.grocery.checked)||{};
+  var h='<div class="seg"><button class="'+(ui.shopDays===7?'on':'')+'" data-act="shop-days" data-v="7">Next 7 days</button><button class="'+(ui.shopDays===14?'on':'')+'" data-act="shop-days" data-v="14">Next 14 days</button></div>';
+  if(!items.length)return h+emptyCard('Nothing to buy yet','Plan meals for the coming days and their ingredients will be added up here.',[['plan-go','Open the plan','primary']]);
+  h+='<div class="card">'+items.map(function(g){return '<button class="chk'+(ck[g.key]?' on':'')+'" data-act="gtick" data-k="'+esc(g.key)+'"><span class="box">'+TICK+'</span><span class="lbl grow">'+esc(g.n)+'</span><span class="mono muted">'+esc((g.has?fmtQ(g.q)+' ':'')+g.u)+'</span></button>'}).join('')+'</div><div class="row"><button class="btn grow" data-act="shop-copy">Copy list</button><button class="btn ghost" data-act="shop-clear">Clear ticks</button></div>';
+  return h;
+}
+
+/* ================= GYM ================= */
+var e1rm=function(kg,reps){return reps<=0?0:reps===1?kg:kg*(1+reps/30)};
+var metric=function(kg,reps){return kg>0?e1rm(kg,reps):reps};
+function exHistory(name){
+  var key=String(name).trim().toLowerCase(),out=[];
+  list('sessions').sort(byDateAsc).forEach(function(s){(s.exercises||[]).forEach(function(e){if(String(e.name).trim().toLowerCase()===key)out.push({date:s.date,sets:e.sets||[]})})});
+  return out;
+}
+function lastSets(name){var h=exHistory(name);return h.length?h[h.length-1].sets:null}
+function bestMetric(name){var b=0;exHistory(name).forEach(function(h){h.sets.forEach(function(s){b=Math.max(b,metric(num(s.kg),num(s.reps)))})});return b}
+function exNames(){var m={};list('sessions').forEach(function(s){(s.exercises||[]).forEach(function(e){m[e.name]=(m[e.name]||0)+1})});list('templates').forEach(function(t){(t.ex||[]).forEach(function(e){if(!m[e.name])m[e.name]=0})});return Object.keys(m).sort(function(a,b){return m[b]-m[a]||a.localeCompare(b)})}
+function fillExList(){$('#exlist').innerHTML=exNames().map(function(n){return '<option value="'+esc(n)+'">'}).join('')}
+function saveDraft(){if(DR)lsSet('upkeep.draft',DR);else lsDel('upkeep.draft')}
+function renderGym(){
+  var sub=ui.sub.gym;
+  return seg('gym',[['train','Train'],['progress','Progress'],['plan','Plan'],['body','Body']],sub)+(sub==='train'?gymTrain():sub==='progress'?gymProgress():sub==='plan'?gymPlan():gymBody());
+}
+function volume(s){var v=0;(s.exercises||[]).forEach(function(e){e.sets.forEach(function(x){v+=num(x.kg)*num(x.reps)})});return Math.round(v)}
+function gymTrain(){
+  var t=todayK(),tp=todaysTemplate(),sess=list('sessions').sort(byDateDesc),doneToday=sess.filter(function(s){return s.date===t}),h='';
+  if(DR)h+='<div class="card"><div class="row between"><div><div class="eyebrow">In progress</div><b>'+esc(DR.name)+'</b></div><button class="btn primary" data-act="wk-resume">Resume</button></div></div>';
+  h+='<div class="card stack"><div class="eyebrow">Today · '+DOW[new Date().getDay()]+'</div>';
+  if(tp)h+='<h3>'+esc(tp.name)+'</h3><p class="small muted">'+(esc((tp.ex||[]).map(function(e){return e.name}).join(' · '))||'No exercises yet')+'</p><div><button class="btn primary" data-act="wk-start" data-id="'+esc(tp.id)+'">Start '+esc(tp.name)+'</button></div>';
+  else h+='<h3>'+(doneToday.length?'Logged today':'Rest day')+'</h3><p class="small muted">No workout is planned for today. Pick days in Plan, or start an empty workout.</p>';
+  h+='</div>';
+  var others=list('templates').filter(function(x){return !tp||x.id!==tp.id}).sort(function(a,b){return (a.at||0)-(b.at||0)});
+  if(!list('templates').length)h+=emptyCard('No workouts yet','Create your own split in Plan, or start from a push, pull and legs plan across six days.',[['starter-gym','Add starter split','primary'],['tpl-new','Create workout']]);
+  else if(others.length)h+='<div class="stack"><div class="eyebrow">Other workouts</div>'+others.map(function(x){return '<button class="rowitem" data-act="wk-start" data-id="'+esc(x.id)+'"><span class="grow"><b>'+esc(x.name)+'</b><br><span class="small muted">'+(x.ex||[]).length+' exercises</span></span><span class="pill acc">Start</span></button>'}).join('')+'</div>';
+  h+='<div><button class="btn" data-act="wk-empty">Start empty workout</button></div>';
+  if(sess.length)h+='<div class="stack"><div class="eyebrow">Recent</div>'+sess.slice(0,8).map(function(s){return '<button class="rowitem" data-act="sess-open" data-id="'+esc(s.id)+'"><span class="grow"><b>'+esc(s.name)+'</b><br><span class="small muted">'+esc(fmtDate(s.date))+' · '+s.exercises.reduce(function(n,e){return n+e.sets.length},0)+' sets · '+volume(s).toLocaleString()+' kg</span></span></button>'}).join('')+'</div>';
+  return h;
+}
+function newEx(name,n,reps){
+  var last=lastSets(name),sets=[];
+  for(var i=0;i<n;i++){var l=last&&last[Math.min(i,last.length-1)];sets.push({kg:l?String(l.kg==null?'':l.kg):'',reps:l?String(l.reps==null?'':l.reps):String(reps||''),done:false})}
+  return {name:name,sets:sets};
+}
+function startWorkout(tid){
+  var t=tid?S.templates[tid]:null;
+  DR={name:t?t.name:'Workout',templateId:tid||null,startedAt:Date.now(),exercises:(t?(t.ex||[]):[]).map(function(e){return newEx(e.name,num(e.sets)||3,e.reps)})};
+  saveDraft();showWorkout();
+}
+function showWorkout(){
+  fillExList();
+  openSheet(workoutView,{full:true,sticky:true,closeLabel:'Minimise',onClose:function(){RT.stop();RT.cb=null}});
+  RT.cb=function(l){var el=$('#rest');if(!el)return;if(l===null){el.hidden=true;return}el.hidden=false;$('#rest-t').textContent=l>0?mmss(l):'Go'};
+}
+function exsHTML(){
+  if(!DR.exercises.length)return '<p class="muted">No exercises yet. Add one below.</p>';
+  return DR.exercises.map(function(ex,e){
+    var last=lastSets(ex.name);
+    return '<div class="card stack"><div class="row between"><b>'+esc(ex.name)+'</b><button class="btn ghost sm" data-act="ex-del" data-e="'+e+'">Remove</button></div>'+
+      '<div class="small muted">'+(last?'Last: '+esc(last.map(function(s){return (s.kg||0)+'×'+s.reps}).join(' · ')):'First time logging this')+'</div>'+
+      '<div class="sets"><div class="set hd"><span>Set</span><span class="center">kg</span><span class="center">Reps</span><span></span><span></span></div>'+
+      ex.sets.map(function(s,i){return '<div class="set'+(s.done?' done':'')+'" data-e="'+e+'" data-s="'+i+'"><span class="sn"><i class="mono" style="font-style:normal">'+(i+1)+'</i><em class="pr"'+(s.pr?'':' hidden')+'>PR</em></span><input data-in="set" data-f="kg" inputmode="decimal" value="'+esc(s.kg)+'" aria-label="Weight in kg"><input data-in="set" data-f="reps" inputmode="numeric" value="'+esc(s.reps)+'" aria-label="Reps"><button class="tick" data-act="set-done" aria-label="Mark set done" aria-pressed="'+(s.done?'true':'false')+'">'+TICK+'</button><button class="x" data-act="set-del" aria-label="Remove set" style="width:28px">×</button></div>'}).join('')+'</div>'+
+      '<div><button class="btn sm" data-act="set-add" data-e="'+e+'">+ Add set</button></div></div>';
+  }).join('');
+}
+function workoutView(){
+  return {title:DR.name,body:'<div class="rest" id="rest" hidden><span>Rest</span><b class="mono grow" id="rest-t" style="font-size:20px"></b><button class="btn sm" data-act="rest-add">+30s</button><button class="btn sm" data-act="rest-skip">Skip</button></div><div id="exs" class="stack">'+exsHTML()+'</div><div class="row"><input id="newex" list="exlist" placeholder="Add exercise" class="grow" aria-label="Exercise name"><button class="btn" data-act="ex-add">Add</button></div><p class="small muted">Tick each set as you finish it. Only ticked sets are saved.</p>',foot:'<button class="btn danger" data-act="wk-discard">Discard</button><button class="btn primary" data-act="wk-finish" style="flex:2">Finish workout</button>'};
+}
+function gymProgress(){
+  var names=exNames().filter(function(n){return exHistory(n).length}),sessions=list('sessions');
+  var wk=weekStart(todayK()),thisWk=sessions.filter(function(s){return s.date>=wk}).length;
+  var target={};list('templates').forEach(function(t){(t.days||[]).forEach(function(d){target[d]=1})});var tg=Object.keys(target).length;
+  var hm={};sessions.forEach(function(s){hm[s.date]=(hm[s.date]||0)+2});
+  var h='<div class="card stack"><div class="row between"><div class="eyebrow">This week</div><span class="mono"><b>'+thisWk+'</b>'+(tg?' / '+tg:'')+' workouts</span></div>'+heat(hm,15)+'</div>';
+  if(!names.length)return h+emptyCard('No lifts logged yet','Finish a workout and your personal records and trends show up here.',[['wk-empty','Start a workout','primary']]);
+  var sel=names.indexOf(ui.exSel)>-1?ui.exSel:names[0];
+  h+='<div class="card stack"><label class="f">Exercise<select id="exsel" data-ch="exsel">'+opts(names,sel)+'</select></label><div id="exchart">'+exChart(sel)+'</div></div>';
+  var prs=names.map(function(n){var best=null,bm=0;exHistory(n).forEach(function(x){x.sets.forEach(function(s){var m=metric(num(s.kg),num(s.reps));if(m>bm){bm=m;best=s}})});return {n:n,s:best,m:bm}}).sort(function(a,b){return b.m-a.m}).slice(0,8);
+  h+='<div class="card stack"><div class="eyebrow">Personal bests</div>'+prs.map(function(p){return '<div class="row between"><span>'+esc(p.n)+'</span><span class="mono">'+(num(p.s.kg)>0?esc(p.s.kg)+' kg × '+esc(p.s.reps):esc(p.s.reps)+' reps')+'</span></div>'}).join('')+'</div>';
+  return h;
+}
+function exChart(name){
+  var hist=exHistory(name),pts=hist.map(function(x){var b=0;x.sets.forEach(function(s){b=Math.max(b,metric(num(s.kg),num(s.reps)))});return {x:x.date,y:b}});
+  var bw=hist.length&&hist[0].sets.every(function(s){return num(s.kg)===0});
+  var best=Math.max.apply(null,pts.map(function(p){return p.y}));
+  return chart(pts)+'<div class="row between small muted"><span>'+(bw?'Best reps per session':'Best estimated 1RM per session (kg)')+'</span><span class="mono">Best '+r1(best)+' · '+pts.length+' sessions</span></div>';
+}
+function gymPlan(){
+  var ts=list('templates').sort(function(a,b){return (a.at||0)-(b.at||0)});
+  var h='<div class="row between"><div class="eyebrow">Workouts</div><button class="btn primary sm" data-act="tpl-new">New workout</button></div>';
+  if(!ts.length)return h+emptyCard('Build your split','Create workouts and choose the days they run on. Today\'s workout is picked from this.',[['starter-gym','Add starter split','primary'],['tpl-new','Create workout']]);
+  return h+ts.map(function(t){return '<button class="rowitem" data-act="tpl-edit" data-id="'+esc(t.id)+'"><span class="grow"><b>'+esc(t.name)+'</b><br><span class="small muted">'+(t.ex||[]).length+' exercises</span></span><span class="small mono muted">'+MON_FIRST.filter(function(d){return (t.days||[]).indexOf(d)>-1}).map(function(d){return DOW[d]}).join(' ')+'</span></button>'}).join('');
+}
+function editTpl(id){
+  var t=id?S.templates[id]:null;
+  D=t?{id:t.id,name:t.name,days:(t.days||[]).slice(),ex:(t.ex||[]).map(function(e){return {name:e.name,sets:e.sets,reps:e.reps}})}:{name:'',days:[],ex:[{name:'',sets:3,reps:10}]};
+  fillExList();openSheet(tplForm,{sticky:true});
+}
+function texRows(){return D.ex.map(function(e,i){return '<div class="row tex" data-i="'+i+'"><input class="grow" data-f="name" list="exlist" placeholder="Exercise" value="'+esc(e.name)+'" aria-label="Exercise"><input data-f="sets" inputmode="numeric" style="width:60px" value="'+esc(e.sets)+'" aria-label="Sets"><input data-f="reps" inputmode="numeric" style="width:60px" value="'+esc(e.reps)+'" aria-label="Reps"><button class="x" data-act="tex-del" data-i="'+i+'" aria-label="Remove exercise">×</button></div>'}).join('')}
+function tplForm(){
+  return {title:D.id?'Edit workout':'New workout',body:'<div class="fields"><label class="f">Name<input id="t-name" value="'+esc(D.name)+'" placeholder="e.g. Push"></label><div><div class="small muted" style="margin-bottom:6px">Days</div><div class="chips" id="tdays">'+MON_FIRST.map(function(d){return '<button class="chip'+(D.days.indexOf(d)>-1?' on':'')+'" data-act="tpl-day" data-v="'+d+'">'+DOW[d]+'</button>'}).join('')+'</div></div><div><div class="row small muted" style="padding-right:34px"><span class="grow">Exercise</span><span style="width:60px">Sets</span><span style="width:60px">Reps</span></div><div id="texs" class="stack" style="gap:8px">'+texRows()+'</div><button class="btn sm" data-act="tex-add" style="margin-top:10px">+ Add exercise</button></div>'+(D.id?'<button class="btn danger" data-act="tpl-del">Delete workout</button>':'')+'</div>',foot:'<button class="btn primary" data-act="tpl-save">Save workout</button>'};
+}
+function collectTpl(){D.name=($('#t-name')||{}).value||'';D.ex=$$('#texs .tex').map(function(row){var o={};$$('[data-f]',row).forEach(function(i){o[i.dataset.f]=i.value});return o})}
+function gymBody(){
+  var b=list('body').sort(byDateDesc),pts=b.slice().reverse().filter(function(x){return num(x.kg)>0}).map(function(x){return {x:x.date,y:num(x.kg)}});
+  var h='<div class="row between"><div class="eyebrow">Body weight and waist</div><button class="btn primary sm" data-act="body-new">Log</button></div>';
+  if(!b.length)return h+emptyCard('Nothing logged','Log weight now and then. Add a waist measurement or a photo if you like.',[['body-new','Log today','primary']]);
+  h+='<div class="card stack">'+chart(pts)+'<div class="small muted">Weight in kg</div></div>';
+  h+=b.slice(0,20).map(function(x){return '<div class="rowitem" style="cursor:default"><span class="thumb">'+(x.photo?'<img alt="" src="'+esc(x.photo)+'">':'<span class="muted small">–</span>')+'</span><span class="grow"><b class="mono">'+(x.kg?esc(x.kg)+' kg':'')+(x.waist?(x.kg?' · ':'')+esc(x.waist)+' cm waist':'')+'</b><br><span class="small muted">'+esc(fmtDate(x.date,{day:'numeric',month:'short',year:'numeric'}))+(x.note?' · '+esc(x.note):'')+'</span></span><button class="btn sm ghost danger" data-act="body-del" data-id="'+esc(x.id)+'">Delete</button></div>'}).join('');
+  return h;
+}
+
+/* ================= WARDROBE ================= */
+var COLORS={Black:'#1b1b1d',White:'#f4f4f2',Grey:'#8c9196',Navy:'#1f2f55',Blue:'#3b73c9',Beige:'#d6c4a2',Brown:'#7a4f33',Olive:'#6b7035',Green:'#3b8a4f',Red:'#c0392b',Maroon:'#6d1f2b',Yellow:'#e6c229',Orange:'#e07a2b',Pink:'#e58aa8',Purple:'#7a4fa8'};
+var COLOR_NAMES=Object.keys(COLORS);
+var NEUTRAL={Black:1,White:1,Grey:1,Beige:1,Navy:1};
+var PAIR={Blue:['White','Grey','Beige','Navy','Brown','Black'],Red:['Black','White','Grey','Navy','Beige'],Olive:['Black','White','Beige','Brown','Navy','Grey','Maroon'],Brown:['Beige','White','Blue','Olive','Navy','Green'],Green:['White','Beige','Navy','Brown','Grey','Black'],Maroon:['Grey','Beige','Navy','Black','White','Olive'],Yellow:['Navy','Grey','Black','White','Blue','Brown'],Orange:['Navy','Blue','Grey','White','Brown','Black'],Pink:['Grey','Navy','White','Beige','Black'],Purple:['Grey','Black','White','Beige']};
+function compat(a,b){return a===b||NEUTRAL[a]||NEUTRAL[b]||(PAIR[a]||[]).indexOf(b)>-1||(PAIR[b]||[]).indexOf(a)>-1}
+var WCATS=['Top','Bottom','Outerwear','Footwear','Accessory'],OCC=['Casual','Work','Formal','Party','Gym','Ethnic'],SEAS=['All year','Summer','Winter','Monsoon'];
+function wearStats(){var m={};list('wears').forEach(function(w){(w.itemIds||[]).forEach(function(id){var e=m[id]||(m[id]={n:0,last:''});e.n++;if(w.date>e.last)e.last=w.date})});return m}
+function closetItems(){return list('items').filter(function(i){return !i.wish})}
+function gaps(){
+  var items=closetItems();if(items.length<3)return [];var out=[];
+  OCC.forEach(function(o){var tg=items.filter(function(i){return (i.occ||[]).indexOf(o)>-1});if(!tg.length)return;['Top','Bottom','Footwear'].forEach(function(c){if(!tg.some(function(i){return i.cat===c}))out.push('No '+o.toLowerCase()+' '+c.toLowerCase())})});
+  return out.slice(0,6);
+}
+function renderWardrobe(){
+  var sub=ui.sub.wardrobe;
+  return seg('wardrobe',[['closet','Closet'],['outfits','Outfits'],['wish','Wishlist']],sub)+(sub==='closet'?wardrobeCloset():sub==='outfits'?wardrobeOutfits():wardrobeWish());
+}
+function wardrobeCloset(){
+  var items=closetItems(),dirty=items.filter(function(i){return i.dirty}).length,g=gaps();
+  var h='<div class="row"><input class="grow" id="wq" type="search" placeholder="Search your closet" data-in="wq" value="'+esc(ui.wq)+'" aria-label="Search closet"><button class="btn primary" data-act="item-new">Add</button></div>'+chips(['All'].concat(WCATS),ui.gcat,'gcat')+
+   '<div class="row"><div class="chips grow">'+['All','Laundry ('+dirty+')','Never worn'].map(function(f){var v=f.split(' (')[0];return '<button class="chip'+(ui.wf===v?' on':'')+'" data-act="wf" data-v="'+v+'">'+esc(f)+'</button>'}).join('')+'</div><select id="wsort" data-ch="wsort" style="width:auto" aria-label="Sort"><option value="new"'+(ui.wsort==='new'?' selected':'')+'>Newest</option><option value="least"'+(ui.wsort==='least'?' selected':'')+'>Least worn</option><option value="last"'+(ui.wsort==='last'?' selected':'')+'>Longest unworn</option></select></div>';
+  if(ui.wf==='Laundry'&&dirty)h+='<div><button class="btn sm" data-act="laundry-clean">Mark all clean</button></div>';
+  if(g.length)h+='<div class="card stack"><div class="eyebrow">Gaps in your closet</div><div class="row wrap">'+g.map(function(x){return '<span class="pill warn">'+esc(x)+'</span>'}).join('')+'</div></div>';
+  h+='<div id="wlist">'+closetGrid()+'</div>';
+  return h;
+}
+function closetGrid(){
+  var all=closetItems();
+  if(!all.length)return emptyCard('Your closet is empty','Photograph what you own. You can then build outfits, track what you wear, and see what is missing.',[['item-new','Add first item','primary']]);
+  var ws=wearStats(),q=ui.wq.trim().toLowerCase();
+  var items=all.filter(function(i){return ui.gcat==='All'||i.cat===ui.gcat}).filter(function(i){return ui.wf==='All'||(ui.wf==='Laundry'?i.dirty:!(ws[i.id]&&ws[i.id].n))}).filter(function(i){return !q||[i.name,i.brand,i.color,i.cat].join(' ').toLowerCase().indexOf(q)>-1});
+  items.sort(function(a,b){var A=ws[a.id]||{n:0,last:''},B=ws[b.id]||{n:0,last:''};if(ui.wsort==='least')return A.n-B.n||(a.at||0)-(b.at||0);if(ui.wsort==='last')return A.last<B.last?-1:A.last>B.last?1:0;return (b.at||0)-(a.at||0)});
+  if(!items.length)return '<p class="muted center">Nothing matches.</p>';
+  return '<div class="grid">'+items.map(function(i){var w=ws[i.id],bg=COLORS[i.color]||'#8c9196';
+    return '<button class="tile" data-act="item" data-id="'+esc(i.id)+'"><span class="ph"'+(i.photo?'':' style="background:'+bg+'"')+'>'+imgOrInit(i.photo,i.name,bg)+'</span>'+(i.dirty?'<span class="pill warn badge">Laundry</span>':'')+'<span class="tb"><b>'+esc(i.name)+'</b><span class="small muted">'+(w?'Worn '+w.n+'× · '+esc(ago(w.last)):'Never worn')+'</span></span></button>'}).join('')+'</div>';
+}
+function openItem(id){DET={id:id};openSheet(itemView)}
+function itemView(){
+  var i=S.items[DET.id];
+  if(!i)return {title:'Item',body:'<p class="muted">This item was removed.</p>'};
+  var w=wearStats()[i.id],cur=cfg().cur||'₹';
+  var body=(i.photo?'<img class="cover" alt="" src="'+esc(i.photo)+'">':'<div class="cover" style="background:'+(COLORS[i.color]||'#8c9196')+'"></div>')+
+   '<dl class="kv"><dt>Category</dt><dd>'+esc(i.cat||'')+'</dd><dt>Colour</dt><dd><span class="dot" style="background:'+(COLORS[i.color]||'#999')+'"></span>'+esc(i.color||'')+'</dd><dt>Season</dt><dd>'+esc(i.season||'')+'</dd>'+((i.occ||[]).length?'<dt>Occasions</dt><dd>'+esc(i.occ.join(', '))+'</dd>':'')+(i.brand?'<dt>Brand</dt><dd>'+esc(i.brand)+'</dd>':'')+(num(i.price)?'<dt>Price</dt><dd class="mono">'+esc(cur)+num(i.price).toLocaleString()+'</dd>':'')+'<dt>Worn</dt><dd>'+(w?w.n+'× · last '+esc(ago(w.last)):'Never')+'</dd>'+(w&&num(i.price)?'<dt>Cost per wear</dt><dd class="mono">'+esc(cur)+Math.round(num(i.price)/w.n).toLocaleString()+'</dd>':'')+'</dl>'+(i.notes?'<p style="white-space:pre-wrap">'+esc(i.notes)+'</p>':'');
+  return {title:i.name,body:body,foot:'<button class="btn primary" data-act="item-wear">Wore today</button><button class="btn" data-act="item-dirty">'+(i.dirty?'Mark clean':'To laundry')+'</button><button class="btn" data-act="item-edit">Edit</button>'};
+}
+function editItem(id,wish){
+  var i=id?S.items[id]:null;
+  D=i?{id:i.id,name:i.name||'',cat:i.cat||'Top',color:i.color||'Black',season:i.season||'All year',occ:(i.occ||[]).slice(),brand:i.brand||'',price:i.price||'',notes:i.notes||'',photo:i.photo||'',wish:!!i.wish,dirty:!!i.dirty}
+    :{name:'',cat:'Top',color:'Black',season:'All year',occ:['Casual'],brand:'',price:'',notes:'',photo:'',wish:!!wish,dirty:false};
+  openSheet(itemForm,{sticky:true});
+}
+function itemForm(){
+  var cur=cfg().cur||'₹';
+  return {title:D.id?'Edit item':(D.wish?'New wish':'New item'),body:'<div class="fields">'+photoField(D.photo)+'<label class="f">Name<input id="i-name" value="'+esc(D.name)+'" placeholder="e.g. Navy oxford shirt"></label><div class="two"><label class="f">Category<select id="i-cat">'+opts(WCATS,D.cat)+'</select></label><label class="f">Season<select id="i-season">'+opts(SEAS,D.season)+'</select></label></div><div><div class="small muted" style="margin-bottom:6px">Colour: <b id="i-colname" style="color:var(--fg)">'+esc(D.color)+'</b></div><div class="row wrap" id="swatches">'+COLOR_NAMES.map(function(c){return '<button class="sw'+(D.color===c?' on':'')+'" style="background:'+COLORS[c]+'" data-act="col" data-v="'+c+'" aria-label="'+c+'"></button>'}).join('')+'</div></div><div><div class="small muted" style="margin-bottom:6px">Occasions</div><div class="chips" id="occs" style="flex-wrap:wrap">'+OCC.map(function(o){return '<button class="chip'+(D.occ.indexOf(o)>-1?' on':'')+'" data-act="occ" data-v="'+o+'">'+o+'</button>'}).join('')+'</div></div><div class="two"><label class="f">Brand<input id="i-brand" value="'+esc(D.brand)+'"></label><label class="f">Price ('+esc(cur)+')<input id="i-price" inputmode="decimal" value="'+esc(D.price)+'"></label></div><label class="f">'+(D.wish?'Where to buy, notes':'Notes')+'<textarea id="i-notes" rows="2">'+esc(D.notes)+'</textarea></label>'+(D.id?'<button class="btn danger" data-act="item-del">Delete item</button>':'')+'</div>',foot:'<button class="btn primary" data-act="item-save">Save</button>'};
+}
+function collectItem(){var g=function(id){var e=$('#'+id);return e?e.value:''};D.name=g('i-name');D.cat=g('i-cat');D.season=g('i-season');D.brand=g('i-brand');D.price=g('i-price');D.notes=g('i-notes')}
+function wearToday(ids,oid){
+  var t=todayK(),cur=S.wears[t]||{id:t,date:t,itemIds:[]},set=(cur.itemIds||[]).slice();
+  ids.forEach(function(i){if(set.indexOf(i)<0)set.push(i)});
+  put('wears',Object.assign({},cur,{itemIds:set,outfitId:oid||cur.outfitId||null}));toast('Logged for today');
+}
+function collage(ids){
+  var cells=ids.slice(0,4).map(function(id){var i=S.items[id];return '<span>'+(i&&i.photo?'<img alt="" src="'+esc(i.photo)+'">':'<span style="display:block;width:100%;height:100%;background:'+(i&&COLORS[i.color]||'#8c9196')+'"></span>')+'</span>'}).join('');
+  return '<div class="collage">'+cells+'</div>';
+}
+function wardrobeOutfits(){
+  var os=list('outfits').sort(function(a,b){return (b.at||0)-(a.at||0)});
+  var h='<div class="row between"><div class="eyebrow">Saved outfits</div><button class="btn primary sm" data-act="outfit-new">Build outfit</button></div>';
+  if(!os.length)return h+emptyCard('No outfits yet','Combine items from your closet into outfits you can wear again. Colour hints show what pairs well.',[['outfit-new','Build an outfit','primary']]);
+  return h+'<div class="grid">'+os.map(function(o){return '<button class="tile" data-act="outfit" data-id="'+esc(o.id)+'"><span class="ph" style="aspect-ratio:auto">'+collage(o.itemIds||[])+'</span><span class="tb"><b>'+esc(o.name)+'</b><span class="small muted">'+esc(o.occ||'')+' · '+(o.itemIds||[]).length+' pieces</span></span></button>'}).join('')+'</div>';
+}
+function openOutfit(id){DET={id:id};openSheet(function(){
+  var o=S.outfits[DET.id];if(!o)return {title:'Outfit',body:'<p class="muted">This outfit was removed.</p>'};
+  return {title:o.name,body:collage(o.itemIds||[])+'<div class="stack" style="gap:8px">'+(o.itemIds||[]).map(function(id){var i=S.items[id];return i?'<div class="row"><span class="thumb">'+(i.photo?'<img alt="" src="'+esc(i.photo)+'">':'<span class="dot" style="background:'+(COLORS[i.color]||'#999')+'"></span>')+'</span><span class="grow"><b>'+esc(i.name)+'</b><br><span class="small muted">'+esc(i.cat+' · '+i.color)+'</span></span></div>':''}).join('')+'</div>'+(o.occ?'<span class="pill acc" style="align-self:flex-start">'+esc(o.occ)+'</span>':''),foot:'<button class="btn primary" data-act="outfit-wear">Wear today</button><button class="btn" data-act="outfit-edit">Edit</button>'};
+})}
+function editOutfit(id){
+  var o=id?S.outfits[id]:null;
+  D=o?{id:o.id,name:o.name,occ:o.occ||'Casual',ids:(o.itemIds||[]).slice()}:{name:'',occ:'Casual',ids:[]};
+  openSheet(outfitForm,{sticky:true,full:true});
+}
+function selColors(){return D.ids.map(function(id){return S.items[id]&&S.items[id].color}).filter(Boolean)}
+function pickerHTML(){
+  var items=closetItems(),sc=selColors(),okc=COLOR_NAMES.filter(function(c){return sc.length&&sc.every(function(s){return compat(s,c)})});
+  if(!items.length)return '<p class="muted">Add items to your closet first.</p>';
+  return WCATS.map(function(cat){
+    var its=items.filter(function(i){return i.cat===cat});if(!its.length)return '';
+    return '<div><div class="small muted">'+cat+'</div><div class="picks">'+its.map(function(i){var on=D.ids.indexOf(i.id)>-1,match=sc.length&&okc.indexOf(i.color)>-1;return '<button class="pick'+(on?' on':'')+(match?' match':'')+'" data-act="pick" data-id="'+esc(i.id)+'" aria-pressed="'+on+'"><span class="pi"'+(i.photo?'':' style="background:'+(COLORS[i.color]||'#999')+'"')+'>'+(i.photo?'<img alt="" src="'+esc(i.photo)+'">':'')+'</span><small>'+esc(i.name)+'</small></button>'}).join('')+'</div></div>'}).join('');
+}
+function hintHTML(){
+  var sc=selColors();if(!sc.length)return 'Pick a piece to see colours that pair with it.';
+  var okc=COLOR_NAMES.filter(function(c){return sc.every(function(s){return compat(s,c)})});
+  return '<b>'+D.ids.length+' selected.</b> Pairs well with: '+(okc.length?okc.map(function(c){return '<span class="dot" style="background:'+COLORS[c]+'"></span>'+c}).join(' &nbsp; '):'no single colour; try fewer pieces')+'. Items outlined in green match.';
+}
+function outfitForm(){
+  return {title:D.id?'Edit outfit':'Build outfit',body:'<div class="fields"><div class="two"><label class="f">Name<input id="o-name" value="'+esc(D.name)+'" placeholder="e.g. Friday office"></label><label class="f">Occasion<select id="o-occ">'+opts(OCC,D.occ)+'</select></label></div><div class="card small" id="hint">'+hintHTML()+'</div><div id="picker" class="stack" style="gap:6px">'+pickerHTML()+'</div>'+(D.id?'<button class="btn danger" data-act="outfit-del">Delete outfit</button>':'')+'</div>',foot:'<button class="btn primary" data-act="outfit-save">Save outfit</button>'};
+}
+function wardrobeWish(){
+  var ws=list('items').filter(function(i){return i.wish}).sort(function(a,b){return (b.at||0)-(a.at||0)}),cur=cfg().cur||'₹';
+  var h='<div class="row between"><div class="eyebrow">Wishlist</div><button class="btn primary sm" data-act="wish-new">Add</button></div>';
+  if(!ws.length)return h+emptyCard('Nothing on the wishlist','Note what you want to buy. Check the gaps card in your closet for ideas.',[['wish-new','Add a wish','primary']]);
+  var total=ws.reduce(function(n,i){return n+num(i.price)},0);
+  h+=ws.map(function(i){return '<div class="rowitem" style="cursor:default"><span class="thumb">'+(i.photo?'<img alt="" src="'+esc(i.photo)+'">':'<span class="dot" style="background:'+(COLORS[i.color]||'#999')+'"></span>')+'</span><span class="grow"><b>'+esc(i.name)+'</b><br><span class="small muted">'+esc([i.cat,i.brand,num(i.price)?cur+num(i.price).toLocaleString():''].filter(Boolean).join(' · '))+'</span></span><button class="btn sm" data-act="wish-bought" data-id="'+esc(i.id)+'">Bought</button><button class="btn sm ghost" data-act="item-edit-id" data-id="'+esc(i.id)+'">Edit</button></div>'}).join('');
+  if(total)h+='<div class="small muted center">Total <span class="mono">'+esc(cur)+total.toLocaleString()+'</span></div>';
+  return h;
+}
+
+/* ================= GROOMING ================= */
+var PTYPES=['Cleanser','Moisturiser','Serum','Sunscreen','Shampoo','Conditioner','Hair oil','Beard care','Razor','Fragrance','Other'];
+var PAO={Cleanser:12,Moisturiser:12,Serum:6,Sunscreen:6,Shampoo:12,Conditioner:12,'Hair oil':12,'Beard care':12,Razor:0,Fragrance:36,Other:12};
+var LOGT=['Haircut','Beard trim','Shave','Hair colour','Facial','Manicure','Other'],AREAS=['Skin','Hair','Beard','Other'];
+function renderGrooming(){
+  var sub=ui.sub.grooming;
+  return seg('grooming',[['today','Today'],['shelf','Shelf'],['log','Log'],['photos','Photos']],sub)+(sub==='today'?groomToday():sub==='shelf'?groomShelf():sub==='log'?groomLog():groomPhotos());
+}
+function checkBlock(title,kind,t){
+  var items=routineItems(kind,t),done=(S.checks[t]&&S.checks[t].done)||{};if(!items.length)return '';
+  var n=items.filter(function(i){return done[i.id]}).length;
+  return '<div class="card"><div class="row between" style="margin-bottom:8px"><b>'+title+'</b><span class="mono small muted">'+n+'/'+items.length+'</span></div><div class="bar"><i style="width:'+Math.round(n/items.length*100)+'%"></i></div>'+items.map(function(i){return '<button class="chk'+(done[i.id]?' on':'')+'" data-act="chk" data-id="'+esc(i.id)+'"><span class="box">'+TICK+'</span><span class="lbl">'+esc(i.label)+'</span></button>'}).join('')+'</div>';
+}
+function groomToday(){
+  var t=todayK(),h='';
+  var blocks=checkBlock('Morning','am',t)+checkBlock('Night','pm',t)+checkBlock('Weekly, today','weekly',t);
+  if(!list('routines').length)h+=emptyCard('No routines yet','Add morning, night and weekly steps to tick off each day. Start from a basic set if you like.',[['starter-groom','Add starter set','primary'],['rt-edit','Build my own']]);
+  else{h+=blocks||'<div class="card muted">Nothing scheduled today.</div>';h+='<div><button class="btn sm" data-act="rt-edit">Edit routines</button></div>'}
+  var rs=list('reminders').map(function(r){return {r:r,d:remDue(r)}}).sort(function(a,b){return a.d.days-b.d.days});
+  h+='<div class="card stack"><div class="row between"><div class="eyebrow">Reminders</div><button class="btn sm" data-act="rem-new">Add</button></div>';
+  if(!rs.length)h+='<span class="muted small">Recurring tasks like a haircut or a new razor blade appear here when due.</span>';
+  rs.forEach(function(x){var d=x.d.days,cls=d<0?'bad':d<=2?'warn':'';h+='<div class="row"><button class="chk grow" style="border:0;padding:6px 0" data-act="rem" data-id="'+esc(x.r.id)+'"><span class="grow"><b>'+esc(x.r.label)+'</b><br><span class="small muted">Every '+esc(x.r.every)+' days'+(x.d.last?' · last '+esc(ago(x.d.last)):'')+'</span></span><span class="pill '+cls+'">'+(d<0?(-d)+' d overdue':d===0?'Due today':'In '+d+' d')+'</span></button><button class="btn sm" data-act="rem-done" data-id="'+esc(x.r.id)+'">Done</button></div>'});
+  return h+'</div>';
+}
+function rtEditor(){
+  var kinds=[['am','Morning'],['pm','Night'],['weekly','Weekly']];
+  return {title:'Edit routines',body:kinds.map(function(k){
+    var its=list('routines').filter(function(r){return r.routine===k[0]}).sort(function(a,b){return (a.order||0)-(b.order||0)});
+    return '<div class="card stack"><b>'+k[1]+'</b>'+its.map(function(i){return '<div class="row"><span class="grow">'+esc(i.label)+'</span>'+(k[0]==='weekly'?'<select data-ch="rt-day" data-id="'+esc(i.id)+'" style="width:auto" aria-label="Day">'+MON_FIRST.map(function(d){return '<option value="'+d+'"'+(i.day===d?' selected':'')+'>'+DOW[d]+'</option>'}).join('')+'</select>':'')+'<button class="x" data-act="rt-del" data-id="'+esc(i.id)+'" aria-label="Remove">×</button></div>'}).join('')+
+      '<div class="row"><input class="grow" id="add-'+k[0]+'" placeholder="Add a step" aria-label="New step for '+k[1]+'">'+(k[0]==='weekly'?'<select id="add-wd" style="width:auto" aria-label="Day">'+MON_FIRST.map(function(d){return '<option value="'+d+'">'+DOW[d]+'</option>'}).join('')+'</select>':'')+'<button class="btn" data-act="rt-add" data-k="'+k[0]+'">Add</button></div></div>'}).join(''),foot:'<button class="btn primary" data-act="close">Done</button>'};
+}
+function groomShelf(){
+  var ps=list('products'),h='<div class="row between"><div class="eyebrow">Product shelf</div><button class="btn primary sm" data-act="prod-new">Add product</button></div>';
+  if(!ps.length)return h+emptyCard('Shelf is empty','Add what you use. Upkeep tracks when each product expires and what to reorder.',[['prod-new','Add a product','primary']]);
+  var reorder=ps.filter(function(p){var s=prodStatus(p);return p.low||(s&&s.d<=14)});
+  if(reorder.length)h+='<div class="card stack"><div class="eyebrow">Reorder soon</div>'+reorder.map(function(p){return '<div class="row between"><b>'+esc(p.name)+'</b><span class="small muted">'+esc(p.low?'Running low':prodStatus(p).s)+'</span></div>'}).join('')+'</div>';
+  var types=['All'].concat(PTYPES.filter(function(t){return ps.some(function(p){return p.type===t})}));
+  h+=chips(types,ui.shelf,'shelf');
+  ps.filter(function(p){return ui.shelf==='All'||p.type===ui.shelf}).sort(function(a,b){var A=prodStatus(a),B=prodStatus(b);return (A?A.d:9999)-(B?B.d:9999)}).forEach(function(p){var s=prodStatus(p);h+='<button class="rowitem" data-act="prod" data-id="'+esc(p.id)+'"><span class="grow"><b>'+esc(p.name)+'</b><br><span class="small muted">'+esc([p.brand,p.type].filter(Boolean).join(' · '))+'</span></span><span class="row wrap" style="justify-content:flex-end;gap:6px">'+(p.reaction?'<span class="pill bad">Reaction noted</span>':'')+(p.low?'<span class="pill warn">Low</span>':'')+(s?'<span class="pill '+s.t+'">'+esc(s.s)+'</span>':'')+'</span></button>'});
+  return h;
+}
+function editProd(id){
+  var p=id?S.products[id]:null;
+  D=p?{id:p.id,name:p.name||'',brand:p.brand||'',type:p.type||'Cleanser',opened:p.opened||'',pao:p.pao==null?'':p.pao,expires:p.expires||'',low:!!p.low,reaction:p.reaction||'',notes:p.notes||''}:{name:'',brand:'',type:'Cleanser',opened:todayK(),pao:12,expires:'',low:false,reaction:'',notes:''};
+  openSheet(function(){return {title:D.id?'Edit product':'Add product',body:'<div class="fields"><label class="f">Name<input id="p-name" value="'+esc(D.name)+'"></label><div class="two"><label class="f">Brand<input id="p-brand" value="'+esc(D.brand)+'"></label><label class="f">Type<select id="p-type" data-ch="ptype">'+opts(PTYPES,D.type)+'</select></label></div><div class="two"><label class="f">Opened on<input id="p-opened" type="date" value="'+esc(D.opened)+'"></label><label class="f">Good for (months)<input id="p-pao" inputmode="numeric" value="'+esc(D.pao)+'"></label></div><label class="f">Or fixed expiry date<input id="p-exp" type="date" value="'+esc(D.expires)+'"></label><label class="row small" style="gap:8px"><input id="p-low" type="checkbox"'+(D.low?' checked':'')+'> Running low, reorder</label><label class="f">Reactions or allergies<textarea id="p-react" rows="2" placeholder="e.g. stings around the eyes">'+esc(D.reaction)+'</textarea></label><label class="f">Notes<textarea id="p-notes" rows="2">'+esc(D.notes)+'</textarea></label>'+(D.id?'<button class="btn danger" data-act="prod-del">Delete product</button>':'')+'</div>',foot:'<button class="btn primary" data-act="prod-save">Save</button>'}},{sticky:true});
+}
+function groomLog(){
+  var gs=list('groom').sort(byDateDesc),h='<div class="row between"><div class="eyebrow">Care log</div><button class="btn primary sm" data-act="log-new">Log</button></div>';
+  if(!gs.length)return h+emptyCard('Nothing logged','Record haircuts, beard trims and other care with the barber, the style and the cost.',[['log-new','Log a haircut','primary']]);
+  var seen={},sum=[];gs.forEach(function(g){if(!seen[g.type]){seen[g.type]=1;sum.push(g)}});
+  h+='<div class="chips">'+sum.map(function(g){return '<span class="pill acc" style="padding:6px 12px">'+esc(g.type)+' · '+esc(ago(g.date))+'</span>'}).join('')+'</div>';
+  h+=gs.slice(0,30).map(function(g){return '<button class="rowitem" data-act="log" data-id="'+esc(g.id)+'"><span class="thumb">'+(g.photo?'<img alt="" src="'+esc(g.photo)+'">':'<span class="muted small">–</span>')+'</span><span class="grow"><b>'+esc(g.type)+'</b><br><span class="small muted">'+esc(fmtDate(g.date,{day:'numeric',month:'short',year:'numeric'}))+(g.place?' · '+esc(g.place):'')+(num(g.cost)?' · '+esc(cfg().cur||'₹')+num(g.cost):'')+'</span>'+(g.notes?'<br><span class="small">'+esc(g.notes)+'</span>':'')+'</span></button>'}).join('');
+  return h;
+}
+function editLog(id){
+  var g=id?S.groom[id]:null;
+  D=g?{id:g.id,type:g.type,date:g.date,place:g.place||'',cost:g.cost||'',notes:g.notes||'',photo:g.photo||''}:{type:'Haircut',date:todayK(),place:'',cost:'',notes:'',photo:''};
+  openSheet(function(){return {title:D.id?'Edit entry':'Log care',body:'<div class="fields"><div class="two"><label class="f">Type<select id="l-type">'+opts(LOGT,D.type)+'</select></label><label class="f">Date<input id="l-date" type="date" value="'+esc(D.date)+'"></label></div><div class="two"><label class="f">Barber or place<input id="l-place" value="'+esc(D.place)+'"></label><label class="f">Cost ('+esc(cfg().cur||'₹')+')<input id="l-cost" inputmode="decimal" value="'+esc(D.cost)+'"></label></div><label class="f">Style and notes<textarea id="l-notes" rows="3" placeholder="e.g. mid fade, 2 on the sides">'+esc(D.notes)+'</textarea></label>'+photoField(D.photo)+(D.id?'<button class="btn danger" data-act="log-del">Delete entry</button>':'')+'</div>',foot:'<button class="btn primary" data-act="log-save">Save</button>'}},{sticky:true});
+}
+function groomPhotos(){
+  var ps=list('photos').sort(byDateDesc),h='<div class="row between"><div class="eyebrow">Progress photos</div><button class="btn primary sm" data-act="ph-new">Add photo</button></div>';
+  if(!ps.length)return h+emptyCard('No photos yet','Take a photo of skin, hair or beard every few weeks to see changes over time.',[['ph-new','Add first photo','primary']]);
+  h+=chips(['All'].concat(AREAS),ui.parea,'parea');
+  var f=ps.filter(function(p){return ui.parea==='All'||p.area===ui.parea});
+  if(f.length>=2){var a=f[f.length-1],b=f[0];h+='<div class="card stack"><div class="eyebrow">First vs latest</div><div class="cmp"><div><img alt="" src="'+esc(a.photo)+'"><div class="small muted center">'+esc(fmtDate(a.date,{day:'numeric',month:'short',year:'numeric'}))+'</div></div><div><img alt="" src="'+esc(b.photo)+'"><div class="small muted center">'+esc(fmtDate(b.date,{day:'numeric',month:'short',year:'numeric'}))+'</div></div></div></div>'}
+  h+='<div class="grid">'+f.map(function(p){return '<button class="tile" data-act="ph" data-id="'+esc(p.id)+'"><span class="ph"><img alt="" src="'+esc(p.photo)+'"></span><span class="tb"><b>'+esc(p.area)+'</b><span class="small muted">'+esc(fmtDate(p.date,{day:'numeric',month:'short',year:'numeric'}))+'</span></span></button>'}).join('')+'</div>';
+  return h;
+}
+function editPhoto(id){
+  var p=id?S.photos[id]:null;
+  D=p?{id:p.id,area:p.area,date:p.date,note:p.note||'',photo:p.photo||''}:{area:'Skin',date:todayK(),note:'',photo:''};
+  openSheet(function(){return {title:D.id?'Photo':'Add photo',body:'<div class="fields">'+photoField(D.photo)+'<div class="two"><label class="f">Area<select id="ph-area">'+opts(AREAS,D.area)+'</select></label><label class="f">Date<input id="ph-date" type="date" value="'+esc(D.date)+'"></label></div><label class="f">Note<textarea id="ph-note" rows="2">'+esc(D.note)+'</textarea></label>'+(D.id?'<button class="btn danger" data-act="ph-del">Delete photo</button>':'')+'</div>',foot:'<button class="btn primary" data-act="ph-save">Save</button>'}},{sticky:true});
+}
+function editRem(id){
+  var r=id?S.reminders[id]:null;
+  D=r?{id:r.id,label:r.label,every:r.every,type:r.type||'',last:r.last||'',created:r.created}:{label:'',every:14,type:'',last:'',created:todayK()};
+  openSheet(function(){return {title:D.id?'Edit reminder':'New reminder',body:'<div class="fields"><label class="f">What<input id="m-label" value="'+esc(D.label)+'" placeholder="e.g. Change razor blade"></label><div class="two"><label class="f">Every (days)<input id="m-every" inputmode="numeric" value="'+esc(D.every)+'"></label><label class="f">Tied to care log<select id="m-type"><option value="">None</option>'+LOGT.map(function(t){return '<option'+(D.type===t?' selected':'')+'>'+t+'</option>'}).join('')+'</select></label></div><p class="small muted">If tied to a care log type, logging it there resets the countdown.</p>'+(D.id?'<button class="btn danger" data-act="rem-del">Delete reminder</button>':'')+'</div>',foot:'<button class="btn primary" data-act="rem-save">Save</button>'}},{sticky:true});
+}
+
+/* ================= SETTINGS ================= */
+function settingsView(){
+  var c=cfg(),skin=c.skin||lsGet('upkeep.theme')&&lsGet('upkeep.theme').skin||'ocean',m=c.mode||(lsGet('upkeep.theme')||{}).mode||'system';
+  var counts=[['Recipes',list('recipes').length],['Workouts logged',list('sessions').length],['Closet items',closetItems().length],['Products',list('products').length]];
+  return {title:'Settings',body:'<div class="fields"><label class="f">Your name<input data-ch="cfg" data-k="name" value="'+esc(c.name||'')+'" placeholder="Shown in the greeting"></label><div><div class="small muted" style="margin-bottom:6px">Colour theme</div><div class="row wrap">'+Object.keys(SKINS).map(function(k){return '<button class="sw'+(skin===k?' on':'')+'" style="background:'+SKINS[k]+'" data-act="skin" data-v="'+k+'" aria-label="'+k+'" title="'+k+'"></button>'}).join('')+'</div></div><div><div class="small muted" style="margin-bottom:6px">Appearance</div><div class="seg">'+[['system','System'],['light','Light'],['dark','Dark']].map(function(o){return '<button class="'+(m===o[0]?'on':'')+'" data-act="mode" data-v="'+o[0]+'">'+o[1]+'</button>'}).join('')+'</div></div><div class="two"><label class="f">Currency symbol<input data-ch="cfg" data-k="cur" value="'+esc(c.cur||'₹')+'" maxlength="3"></label><label class="f">Rest timer (seconds)<input data-ch="cfg" data-k="restSec" data-n="1" inputmode="numeric" value="'+esc(c.restSec==null?90:c.restSec)+'"></label></div><div class="card small stack"><b>'+(mode==='cloud'?'Synced to your account':'Stored on this device only')+'</b><span class="muted">'+(mode==='cloud'?'Your data is private to you and appears on any device where you open this page signed in.':'Open this page signed in to claude.ai to sync across devices.')+'</span><span class="muted mono">'+counts.map(function(x){return x[0]+': '+x[1]}).join(' · ')+'</span></div></div>',foot:'<button class="btn primary" data-act="close">Done</button>'};
+}
+
+/* ================= actions ================= */
+var ACT={};
+ACT.nav=function(el){go(el.dataset.id)};
+ACT.close=function(){closeSheet()};
+ACT.settings=function(){openSheet(settingsView)};
+ACT.sub=function(el){ui.sub[el.dataset.k]=el.dataset.v;paint()};
+ACT.skin=function(el){setCfg({skin:el.dataset.v});paintSheet()};
+ACT.mode=function(el){setCfg({mode:el.dataset.v});paintSheet()};
+ACT['photo-clear']=function(){if(D){D.photo='';var pv=$('#pv');if(pv)pv.innerHTML='<span class="muted small">No photo yet</span>'}};
+/* starters */
+ACT['starter-gym']=function(){
+  var ex={Push:[['Bench Press',4,8],['Overhead Press',3,10],['Incline Dumbbell Press',3,10],['Lateral Raise',3,15],['Triceps Pushdown',3,12]],Pull:[['Deadlift',3,5],['Pull-up',4,8],['Barbell Row',4,8],['Face Pull',3,15],['Biceps Curl',3,12]],Legs:[['Squat',4,8],['Romanian Deadlift',3,10],['Leg Press',3,12],['Leg Curl',3,12],['Calf Raise',4,15]]};
+  var days={Push:[1,4],Pull:[2,5],Legs:[3,6]},n=0;
+  Object.keys(ex).forEach(function(k){put('templates',{name:k,days:days[k],ex:ex[k].map(function(e){return {name:e[0],sets:e[1],reps:e[2]}}),at:Date.now()+(n++)})});
+  toast('Starter split added. Edit it in Gym, Plan.');
+};
+ACT['starter-groom']=function(){
+  var o=0,t=todayK();
+  [['am','Cleanse face'],['am','Moisturise'],['am','Sunscreen'],['am','Brush teeth'],['pm','Cleanse face'],['pm','Moisturise or serum'],['pm','Brush and floss']].forEach(function(x){put('routines',{routine:x[0],label:x[1],order:o++})});
+  [[0,'Exfoliate'],[3,'Trim nails'],[6,'Face mask']].forEach(function(x){put('routines',{routine:'weekly',day:x[0],label:x[1],order:o++})});
+  [['Haircut',28,'Haircut'],['Beard trim',10,'Beard trim'],['Change razor blade',14,''],['Replace toothbrush',90,'']].forEach(function(x){put('reminders',{label:x[0],every:x[1],type:x[2],created:t})});
+  toast('Starter routines added.');
+};
+ACT['example-recipe']=function(){
+  put('recipes',{title:'Masala oats omelette',cat:'Breakfast',servings:1,time:10,fav:false,tags:['high-protein','quick'],at:Date.now(),photo:'',notes:'Example recipe. Edit or delete it.',steps:['Beat the eggs with salt and pepper.','Soften the chopped onion and chilli in ghee (2 min).','Stir in the oats and the eggs, spread flat and cook (4 min).','Fold and serve hot.'],ings:[{q:40,u:'g',n:'Rolled oats',kcal:150,p:5,c:27,f:3},{q:2,u:'pc',n:'Eggs',kcal:156,p:12.6,c:1.2,f:10.6},{q:30,u:'g',n:'Onion',kcal:12,p:.3,c:2.8,f:0},{q:1,u:'tsp',n:'Ghee',kcal:45,p:0,c:0,f:5}]});
+  toast('Example recipe added.');
+};
+/* cookbook */
+ACT.cat=function(el){ui.cat=el.dataset.v;paint()};
+ACT['recipe-new']=function(){editRecipe(null)};
+ACT.recipe=function(el){openRecipe(el.dataset.id)};
+ACT['recipe-edit']=function(){editRecipe(DET.id)};
+ACT['recipe-fav']=function(){var r=S.recipes[DET.id];if(r){put('recipes',Object.assign({},r,{fav:!r.fav}));paintSheet()}};
+ACT.rsv=function(el){DET.sv=Math.max(1,DET.sv+num(el.dataset.d));paintSheet()};
+ACT['recipe-cooked']=function(){put('cooked',{date:todayK(),rid:DET.id,at:Date.now()});toast('Logged as cooked today')};
+ACT['ing-add']=function(){collectRecipe();D.ings.push(blankIng());$('#ings').innerHTML=ingRows();var rows=$$('#ings .ing');var last=rows[rows.length-1];if(last)$('[data-f="n"]',last).focus()};
+ACT['ing-del']=function(el){collectRecipe();D.ings.splice(+el.dataset.i,1);if(!D.ings.length)D.ings=[blankIng()];$('#ings').innerHTML=ingRows();$('#tot').textContent=totText()};
+ACT['recipe-save']=function(){
+  collectRecipe();
+  if(!D.title.trim()){toast('Give the recipe a name');return}
+  var ings=D.ings.filter(function(g){return String(g.n).trim()||String(g.q).trim()}).map(function(g){return {q:String(g.q).trim()===''?null:num(g.q),u:String(g.u||'').trim(),n:String(g.n||'').trim(),kcal:num(g.kcal),p:num(g.p),c:num(g.c),f:num(g.f)}});
+  var old=D.id?S.recipes[D.id]:null;
+  put('recipes',{id:D.id,title:D.title.trim(),cat:D.cat,servings:Math.max(1,num(D.servings)||1),time:num(D.time),photo:D.photo,fav:D.fav,tags:D.tags.split(',').map(function(s){return s.trim()}).filter(Boolean),steps:D.steps.split('\n').map(function(s){return s.trim()}).filter(Boolean),notes:D.notes.trim(),ings:ings,at:Date.now()});
+  closeSheet();toast(old?'Recipe updated':'Recipe saved');
+};
+ACT['recipe-del']=function(el){if(!armed(el))return;del('recipes',D.id);closeSheet();toast('Recipe deleted')};
+ACT['cook-start']=function(){var r=S.recipes[DET.id];if(!r)return;CK={id:DET.id,i:0,sv:DET.sv};keepAwake();TM.cb=function(l){var e=$('#tmr');if(e)e.textContent=l===null?'':l>0?mmss(l):'Time is up'};openSheet(cookView,{full:true,sticky:true,closeLabel:'Close',after:function(){if(TM.running())TM.tick()},onClose:function(){TM.stop();TM.cb=null;releaseAwake()}})};
+ACT['cook-step']=function(el){CK.i=Math.max(0,CK.i+num(el.dataset.d));paintSheet()};
+ACT['cook-timer']=function(el){TM.start(num(el.dataset.s));paintSheet()};
+ACT['cook-timer-stop']=function(){TM.stop();paintSheet()};
+ACT['cook-done']=function(){put('cooked',{date:todayK(),rid:CK.id,at:Date.now()});closeSheet();toast('Logged as cooked. Enjoy.')};
+ACT['plan-open']=function(el){openPlanAdd(el.dataset.date,el.dataset.id)};
+ACT['plan-go']=function(){ui.sub.cook='plan';go('cook')};
+ACT['plan-wk']=function(el){ui.planWeek+=num(el.dataset.d);paint()};
+ACT['plan-save']=function(){
+  var rid=($('#pa-r')||{}).value,d=($('#pa-d')||{}).value,slot=($('#pa-s')||{}).value,sv=num(($('#pa-p')||{}).value)||1;
+  if(!rid||!d){toast('Choose a recipe and a day');return}
+  var cur=S.plan[d]||{id:d,date:d,meals:[]};
+  put('plan',Object.assign({},cur,{meals:(cur.meals||[]).concat([{id:uid(),rid:rid,slot:slot,sv:sv}])}));
+  closeSheet();toast('Added to plan');
+};
+ACT['plan-del']=function(el){var cur=S.plan[el.dataset.date];if(!cur)return;put('plan',Object.assign({},cur,{meals:(cur.meals||[]).filter(function(m){return m.id!==el.dataset.mid})}))};
+ACT['shop-days']=function(el){ui.shopDays=num(el.dataset.v);paint()};
+ACT.gtick=function(el){var ck=Object.assign({},(S.meta.grocery&&S.meta.grocery.checked)||{});ck[el.dataset.k]=!ck[el.dataset.k];put('meta',{id:'grocery',checked:ck})};
+ACT['shop-clear']=function(){put('meta',{id:'grocery',checked:{}})};
+ACT['shop-copy']=function(){var ck=(S.meta.grocery&&S.meta.grocery.checked)||{};copyText(groceryList(ui.shopDays).filter(function(g){return !ck[g.key]}).map(function(g){return '- '+((g.has?fmtQ(g.q)+' ':'')+g.u+' '+g.n).replace(/\s+/g,' ').trim()}).join('\n'))};
+/* gym */
+ACT['wk-start']=function(el){startWorkout(el.dataset.id)};
+ACT['wk-empty']=function(){startWorkout(null)};
+ACT['wk-resume']=function(){if(DR)showWorkout()};
+ACT['wk-discard']=function(el){if(!armed(el))return;DR=null;saveDraft();closeSheet();toast('Workout discarded');if(ui.tab==='gym'||ui.tab==='home')paint()};
+ACT['wk-finish']=function(){
+  var prs=0;
+  var exs=DR.exercises.map(function(e){return {name:e.name,sets:e.sets.filter(function(s){if(s.done&&s.pr)prs++;return s.done}).map(function(s){return {kg:num(s.kg),reps:num(s.reps)}})}}).filter(function(e){return e.sets.length});
+  if(!exs.length){toast('Tick the sets you completed first');return}
+  put('sessions',{date:todayK(),name:DR.name,templateId:DR.templateId,durationMin:Math.max(1,Math.round((Date.now()-DR.startedAt)/60000)),exercises:exs,at:Date.now()});
+  DR=null;saveDraft();closeSheet();toast('Workout saved'+(prs?' · '+prs+' new PR'+(prs>1?'s':''):''));
+};
+ACT['ex-add']=function(){var i=$('#newex'),n=i.value.trim();if(!n)return;DR.exercises.push(newEx(n,3,''));saveDraft();i.value='';$('#exs').innerHTML=exsHTML()};
+ACT['ex-del']=function(el){DR.exercises.splice(+el.dataset.e,1);saveDraft();$('#exs').innerHTML=exsHTML()};
+ACT['set-add']=function(el){var ex=DR.exercises[+el.dataset.e],l=ex.sets[ex.sets.length-1];ex.sets.push({kg:l?l.kg:'',reps:l?l.reps:'',done:false});saveDraft();$('#exs').innerHTML=exsHTML()};
+ACT['set-del']=function(el){var row=el.closest('.set'),ex=DR.exercises[+row.dataset.e];if(ex.sets.length>1)ex.sets.splice(+row.dataset.s,1);saveDraft();$('#exs').innerHTML=exsHTML()};
+ACT['set-done']=function(el){
+  var row=el.closest('.set'),ex=DR.exercises[+row.dataset.e],s=ex.sets[+row.dataset.s];
+  s.done=!s.done;
+  if(s.done){
+    var kg=num(s.kg),rp=num(s.reps);
+    if(rp<=0){s.done=false;toast('Enter the reps first');return}
+    var m=metric(kg,rp),best=bestMetric(ex.name);
+    ex.sets.forEach(function(o){if(o!==s&&o.done)best=Math.max(best,metric(num(o.kg),num(o.reps)))});
+    s.pr=best>0&&m>best+1e-9;if(s.pr)toast('New PR: '+ex.name);
+    var rs=cfg().restSec==null?90:num(cfg().restSec);if(rs>0)RT.start(rs);
+  }else s.pr=false;
+  row.classList.toggle('done',s.done);el.setAttribute('aria-pressed',s.done?'true':'false');
+  var pr=$('.pr',row);if(pr)pr.hidden=!s.pr;saveDraft();
+};
+ACT['rest-add']=function(){RT.add(30)};
+ACT['rest-skip']=function(){RT.stop()};
+ACT['sess-open']=function(el){DET={id:el.dataset.id};openSheet(function(){
+  var s=S.sessions[DET.id];if(!s)return {title:'Workout',body:'<p class="muted">Removed.</p>'};
+  return {title:s.name,body:'<div class="small muted">'+esc(fmtDate(s.date,{weekday:'long',day:'numeric',month:'long'}))+(s.durationMin?' · '+s.durationMin+' min':'')+' · '+volume(s).toLocaleString()+' kg volume</div>'+s.exercises.map(function(e){return '<div class="card stack" style="gap:6px"><b>'+esc(e.name)+'</b>'+e.sets.map(function(x,i){return '<div class="row between mono small"><span class="muted">Set '+(i+1)+'</span><span>'+(num(x.kg)?esc(x.kg)+' kg × ':'')+esc(x.reps)+(num(x.kg)?'':' reps')+'</span></div>'}).join('')+'</div>'}).join(''),foot:'<button class="btn danger" data-act="sess-del">Delete workout</button>'};
+})};
+ACT['sess-del']=function(el){if(!armed(el))return;del('sessions',DET.id);closeSheet();toast('Workout deleted')};
+ACT['tpl-new']=function(){editTpl(null)};
+ACT['tpl-edit']=function(el){editTpl(el.dataset.id)};
+ACT['tpl-day']=function(el){var d=num(el.dataset.v),i=D.days.indexOf(d);if(i>-1)D.days.splice(i,1);else D.days.push(d);el.classList.toggle('on',i<0)};
+ACT['tex-add']=function(){collectTpl();D.ex.push({name:'',sets:3,reps:10});$('#texs').innerHTML=texRows();var rows=$$('#texs .tex');$('[data-f="name"]',rows[rows.length-1]).focus()};
+ACT['tex-del']=function(el){collectTpl();D.ex.splice(+el.dataset.i,1);$('#texs').innerHTML=texRows()};
+ACT['tpl-save']=function(){
+  collectTpl();if(!D.name.trim()){toast('Name the workout');return}
+  var old=D.id?S.templates[D.id]:null;
+  put('templates',{id:D.id,name:D.name.trim(),days:D.days,ex:D.ex.filter(function(e){return String(e.name).trim()}).map(function(e){return {name:String(e.name).trim(),sets:num(e.sets)||3,reps:num(e.reps)||10}}),at:old?old.at:Date.now()});
+  closeSheet();toast('Workout saved');
+};
+ACT['tpl-del']=function(el){if(!armed(el))return;del('templates',D.id);closeSheet()};
+ACT['body-new']=function(){
+  D={date:todayK(),kg:'',waist:'',note:'',photo:''};
+  openSheet(function(){return {title:'Log body',body:'<div class="fields"><label class="f">Date<input id="b-date" type="date" value="'+esc(D.date)+'"></label><div class="two"><label class="f">Weight (kg)<input id="b-kg" inputmode="decimal" value="'+esc(D.kg)+'"></label><label class="f">Waist (cm)<input id="b-waist" inputmode="decimal" value="'+esc(D.waist)+'"></label></div><label class="f">Note<input id="b-note" value="'+esc(D.note)+'"></label>'+photoField(D.photo)+'</div>',foot:'<button class="btn primary" data-act="body-save">Save</button>'}},{sticky:true});
+};
+ACT['body-save']=function(){
+  var kg=num($('#b-kg').value),w=num($('#b-waist').value);
+  if(!kg&&!w&&!D.photo){toast('Enter a weight, waist or photo');return}
+  put('body',{date:$('#b-date').value||todayK(),kg:kg||'',waist:w||'',note:$('#b-note').value.trim(),photo:D.photo,at:Date.now()});closeSheet();toast('Logged');
+};
+ACT['body-del']=function(el){if(!armed(el))return;del('body',el.dataset.id)};
+/* wardrobe */
+ACT.gcat=function(el){ui.gcat=el.dataset.v;paint()};
+ACT.wf=function(el){ui.wf=el.dataset.v;paint()};
+ACT['item-new']=function(){editItem(null,false)};
+ACT['wish-new']=function(){editItem(null,true)};
+ACT.item=function(el){openItem(el.dataset.id)};
+ACT['item-edit']=function(){editItem(DET.id)};
+ACT['item-edit-id']=function(el){editItem(el.dataset.id)};
+ACT.col=function(el){D.color=el.dataset.v;$$('#swatches .sw').forEach(function(b){b.classList.toggle('on',b===el)});$('#i-colname').textContent=D.color};
+ACT.occ=function(el){var o=el.dataset.v,i=D.occ.indexOf(o);if(i>-1)D.occ.splice(i,1);else D.occ.push(o);el.classList.toggle('on',i<0)};
+ACT['item-save']=function(){
+  collectItem();if(!D.name.trim()){toast('Name the item');return}
+  var old=D.id?S.items[D.id]:null;
+  put('items',{id:D.id,name:D.name.trim(),cat:D.cat,color:D.color,season:D.season,occ:D.occ,brand:D.brand.trim(),price:num(D.price)||'',notes:D.notes.trim(),photo:D.photo,wish:D.wish,dirty:D.dirty,at:old?old.at:Date.now()});
+  closeSheet();toast('Saved');
+};
+ACT['item-del']=function(el){if(!armed(el))return;del('items',D.id);closeSheet()};
+ACT['item-dirty']=function(){var i=S.items[DET.id];if(i){put('items',Object.assign({},i,{dirty:!i.dirty}));paintSheet()}};
+ACT['item-wear']=function(){wearToday([DET.id])};
+ACT['laundry-clean']=function(){closetItems().forEach(function(i){if(i.dirty)put('items',Object.assign({},i,{dirty:false}))});ui.wf='All';toast('All clean')};
+ACT['wish-bought']=function(el){var i=S.items[el.dataset.id];if(i){put('items',Object.assign({},i,{wish:false,at:Date.now()}));toast('Moved to your closet')}};
+ACT['outfit-go']=function(){ui.sub.wardrobe='outfits';go('wardrobe')};
+ACT['outfit-new']=function(){editOutfit(null)};
+ACT.outfit=function(el){openOutfit(el.dataset.id)};
+ACT['outfit-edit']=function(){editOutfit(DET.id)};
+ACT['outfit-wear']=function(){var o=S.outfits[DET.id];if(o)wearToday(o.itemIds||[],o.id)};
+ACT.pick=function(el){var o=($('#o-name')||{}).value;if(o!=null)D.name=o;var id=el.dataset.id,i=D.ids.indexOf(id);if(i>-1)D.ids.splice(i,1);else D.ids.push(id);$('#picker').innerHTML=pickerHTML();$('#hint').innerHTML=hintHTML()};
+ACT['outfit-save']=function(){
+  if(!D.ids.length){toast('Pick at least one item');return}
+  var n=(($('#o-name')||{}).value||'').trim(),old=D.id?S.outfits[D.id]:null;
+  put('outfits',{id:D.id,name:n||'Outfit '+(list('outfits').length+1),occ:$('#o-occ').value,itemIds:D.ids,at:old?old.at:Date.now()});closeSheet();toast('Outfit saved');
+};
+ACT['outfit-del']=function(el){if(!armed(el))return;del('outfits',D.id);closeSheet()};
+/* grooming */
+ACT.chk=function(el){var t=todayK(),cur=S.checks[t]||{id:t,date:t,done:{}},d=Object.assign({},cur.done);d[el.dataset.id]=!d[el.dataset.id];put('checks',Object.assign({},cur,{done:d}))};
+ACT['rt-edit']=function(){openSheet(rtEditor)};
+ACT['rt-add']=function(el){var k=el.dataset.k,i=$('#add-'+k),v=i.value.trim();if(!v)return;var o={routine:k,label:v,order:Date.now()%1e9};if(k==='weekly')o.day=num($('#add-wd').value);put('routines',o);paintSheet()};
+ACT['rt-del']=function(el){del('routines',el.dataset.id);paintSheet()};
+ACT['prod-new']=function(){editProd(null)};
+ACT.prod=function(el){editProd(el.dataset.id)};
+ACT.shelf=function(el){ui.shelf=el.dataset.v;paint()};
+ACT['prod-save']=function(){
+  var name=$('#p-name').value.trim();if(!name){toast('Name the product');return}
+  put('products',{id:D.id,name:name,brand:$('#p-brand').value.trim(),type:$('#p-type').value,opened:$('#p-opened').value,pao:$('#p-pao').value===''?'':num($('#p-pao').value),expires:$('#p-exp').value,low:$('#p-low').checked,reaction:$('#p-react').value.trim(),notes:$('#p-notes').value.trim(),at:Date.now()});closeSheet();toast('Saved');
+};
+ACT['prod-del']=function(el){if(!armed(el))return;del('products',D.id);closeSheet()};
+ACT['log-new']=function(){editLog(null)};
+ACT.log=function(el){editLog(el.dataset.id)};
+ACT['log-save']=function(){put('groom',{id:D.id,type:$('#l-type').value,date:$('#l-date').value||todayK(),place:$('#l-place').value.trim(),cost:num($('#l-cost').value)||'',notes:$('#l-notes').value.trim(),photo:D.photo,at:Date.now()});closeSheet();toast('Logged')};
+ACT['log-del']=function(el){if(!armed(el))return;del('groom',D.id);closeSheet()};
+ACT.parea=function(el){ui.parea=el.dataset.v;paint()};
+ACT['ph-new']=function(){editPhoto(null)};
+ACT.ph=function(el){editPhoto(el.dataset.id)};
+ACT['ph-save']=function(){if(!D.photo){toast('Add a photo first');return}put('photos',{id:D.id,area:$('#ph-area').value,date:$('#ph-date').value||todayK(),note:$('#ph-note').value.trim(),photo:D.photo,at:Date.now()});closeSheet();toast('Saved')};
+ACT['ph-del']=function(el){if(!armed(el))return;del('photos',D.id);closeSheet()};
+ACT['rem-new']=function(){editRem(null)};
+ACT.rem=function(el){editRem(el.dataset.id)};
+ACT['rem-save']=function(){var l=$('#m-label').value.trim();if(!l){toast('Say what the reminder is for');return}put('reminders',{id:D.id,label:l,every:Math.max(1,num($('#m-every').value)||7),type:$('#m-type').value,last:D.last||'',created:D.created||todayK()});closeSheet();toast('Saved')};
+ACT['rem-del']=function(el){if(!armed(el))return;del('reminders',D.id);closeSheet()};
+ACT['rem-done']=function(el){var r=S.reminders[el.dataset.id];if(r){put('reminders',Object.assign({},r,{last:todayK()}));toast('Marked done')}};
+
+/* input + change handlers */
+var IN={},CH={};
+IN.rq=function(el){ui.q=el.value;var l=$('#rlist');if(l)l.innerHTML=recipeGrid()};
+IN.wq=function(el){ui.wq=el.value;var l=$('#wlist');if(l)l.innerHTML=closetGrid()};
+IN.rtot=function(){collectRecipe();var t=$('#tot');if(t)t.textContent=totText()};
+IN.set=function(el){var row=el.closest('.set');if(!row||!DR)return;DR.exercises[+row.dataset.e].sets[+row.dataset.s][el.dataset.f]=el.value;saveDraft()};
+CH.photo=function(el){
+  var f=el.files&&el.files[0];if(!f||!D)return;
+  shrink(f,560,.72).then(function(u){D.photo=u;var pv=$('#pv');if(pv)pv.innerHTML='<img alt="" src="'+esc(u)+'">'}).catch(function(){toast('Could not read that image')});
+};
+CH.exsel=function(el){ui.exSel=el.value;var c=$('#exchart');if(c)c.innerHTML=exChart(el.value)};
+CH.wsort=function(el){ui.wsort=el.value;var l=$('#wlist');if(l)l.innerHTML=closetGrid()};
+CH.ptype=function(el){var p=$('#p-pao');if(p&&PAO[el.value]!=null)p.value=PAO[el.value]||''};
+CH.cfg=function(el){var v=el.dataset.n?num(el.value):el.value;var o={};o[el.dataset.k]=v;setCfg(o)};
+CH['rt-day']=function(el){var r=S.routines[el.dataset.id];if(r)put('routines',Object.assign({},r,{day:num(el.value)}))};
+
+document.addEventListener('click',function(e){
+  var el=e.target.closest&&e.target.closest('[data-act]');if(!el)return;
+  var fn=ACT[el.dataset.act];if(fn){try{fn(el,e)}catch(err){console.error(err);toast('Something went wrong')}}
+});
+document.addEventListener('input',function(e){var el=e.target,k=el.dataset&&el.dataset.in;if(k&&IN[k])IN[k](el,e)});
+document.addEventListener('change',function(e){var el=e.target,k=el.dataset&&el.dataset.ch;if(k&&CH[k])CH[k](el,e)});
+
+/* ================= boot ================= */
+(function(){
+  var h=location.hash.slice(1);if(SEC.some(function(s){return s.id===h}))ui.tab=h;
+  buildNav();applyTheme();
+  var d=lsGet('upkeep.draft');if(d&&d.exercises)DR=d;
+  paint();initStore();
+})();
+})();
+</script>
+
+</body>
+</html>
