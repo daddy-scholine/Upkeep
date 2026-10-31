@@ -5,7 +5,7 @@ A single-page lifestyle app with four sections, built to grow:
 - **Cookbook**: recipes with photos, scaling by servings, macros per serving, step-by-step cooking mode with timers, weekly meal plan, grocery list.
 - **Gym**: workout templates by weekday, set logging with last-session numbers, rest timer, personal bests, progress charts, body weight log.
 - **Wardrobe**: closet with photos, outfits, wear counts, laundry status, colour-pairing hints, gaps and wishlist.
-- **Grooming**: daily and weekly routines, product shelf with expiry dates, care log, progress photos, recurring reminders.
+- **Grooming**: daily and weekly routines, product shelf with expiry dates, wishlist, care log, progress photos, recurring reminders.
 
 Home shows today's workout, routines, meals, outfit and a streak heat map. Five colour themes, each with light and dark.
 

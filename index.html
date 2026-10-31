@@ -245,7 +245,7 @@ var byDateAsc=function(a,b){return byDateDesc(b,a)};
 var TICK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
 /* ================= state + storage ================= */
-var COLS=['recipes','plan','cooked','templates','sessions','body','items','outfits','wears','routines','checks','products','groom','reminders','photos','meta'];
+var COLS=['recipes','plan','cooked','templates','sessions','body','items','outfits','wears','routines','checks','products','groom','reminders','photos','gwish','meta'];
 var S={};COLS.forEach(function(c){S[c]={}});
 var list=function(c){return Object.keys(S[c]).map(function(k){return S[c][k]})};
 var base=null,mode='local',ready=false,writeFail=false,queues={};
@@ -911,7 +911,7 @@ var PAO={Cleanser:12,Moisturiser:12,Serum:6,Sunscreen:6,Shampoo:12,Conditioner:1
 var LOGT=['Haircut','Beard trim','Shave','Hair colour','Facial','Manicure','Other'],AREAS=['Skin','Hair','Beard','Other'];
 function renderGrooming(){
   var sub=ui.sub.grooming;
-  return seg('grooming',[['today','Today'],['shelf','Shelf'],['log','Log'],['photos','Photos']],sub)+(sub==='today'?groomToday():sub==='shelf'?groomShelf():sub==='log'?groomLog():groomPhotos());
+  return seg('grooming',[['today','Today'],['shelf','Shelf'],['wish','Wishlist'],['log','Log'],['photos','Photos']],sub)+(sub==='today'?groomToday():sub==='shelf'?groomShelf():sub==='wish'?groomWish():sub==='log'?groomLog():groomPhotos());
 }
 function checkBlock(title,kind,t){
   var items=routineItems(kind,t),done=(S.checks[t]&&S.checks[t].done)||{};if(!items.length)return '';
@@ -940,11 +940,29 @@ function groomShelf(){
   var ps=list('products'),h='<div class="row between"><div class="eyebrow">Product shelf</div><button class="btn primary sm" data-act="prod-new">Add product</button></div>';
   if(!ps.length)return h+emptyCard('Shelf is empty','Add what you use. Upkeep tracks when each product expires and what to reorder.',[['prod-new','Add a product','primary']]);
   var reorder=ps.filter(function(p){var s=prodStatus(p);return p.low||(s&&s.d<=14)});
-  if(reorder.length)h+='<div class="card stack"><div class="eyebrow">Reorder soon</div>'+reorder.map(function(p){return '<div class="row between"><b>'+esc(p.name)+'</b><span class="small muted">'+esc(p.low?'Running low':prodStatus(p).s)+'</span></div>'}).join('')+'</div>';
+  if(reorder.length)h+='<div class="card stack"><div class="eyebrow">Reorder soon</div>'+reorder.map(function(p){return '<div class="row"><span class="grow"><b>'+esc(p.name)+'</b><br><span class="small muted">'+esc(p.low?'Running low':prodStatus(p).s)+'</span></span><button class="btn sm" data-act="gw-from" data-id="'+esc(p.id)+'">Add to wishlist</button></div>'}).join('')+'</div>';
   var types=['All'].concat(PTYPES.filter(function(t){return ps.some(function(p){return p.type===t})}));
   h+=chips(types,ui.shelf,'shelf');
   ps.filter(function(p){return ui.shelf==='All'||p.type===ui.shelf}).sort(function(a,b){var A=prodStatus(a),B=prodStatus(b);return (A?A.d:9999)-(B?B.d:9999)}).forEach(function(p){var s=prodStatus(p);h+='<button class="rowitem" data-act="prod" data-id="'+esc(p.id)+'"><span class="grow"><b>'+esc(p.name)+'</b><br><span class="small muted">'+esc([p.brand,p.type].filter(Boolean).join(' · '))+'</span></span><span class="row wrap" style="justify-content:flex-end;gap:6px">'+(p.reaction?'<span class="pill bad">Reaction noted</span>':'')+(p.low?'<span class="pill warn">Low</span>':'')+(s?'<span class="pill '+s.t+'">'+esc(s.s)+'</span>':'')+'</span></button>'});
   return h;
+}
+var PRIO=['High','Medium','Low'];
+function groomWish(){
+  var cur=cfg().cur||'₹',ws=list('gwish').sort(function(a,b){return PRIO.indexOf(a.prio||'Medium')-PRIO.indexOf(b.prio||'Medium')||(b.at||0)-(a.at||0)});
+  var h='<div class="row between"><div class="eyebrow">Wishlist</div><button class="btn primary sm" data-act="gw-new">Add</button></div>';
+  if(!ws.length)return h+emptyCard('Nothing on the wishlist','Note the grooming products you want to try or buy. Mark one as bought and it moves to your shelf.',[['gw-new','Add a wish','primary']]);
+  var total=ws.reduce(function(n,w){return n+num(w.price)},0);
+  h+=ws.map(function(w){
+    var pc=(w.prio||'Medium')==='High'?'bad':(w.prio||'Medium')==='Low'?'':'warn';
+    return '<div class="rowitem" style="cursor:default"><span class="grow"><b>'+esc(w.name)+'</b> <span class="pill '+pc+'">'+esc(w.prio||'Medium')+'</span><br><span class="small muted">'+esc([w.type,w.brand,num(w.price)?cur+num(w.price).toLocaleString():''].filter(Boolean).join(' · '))+'</span>'+(w.notes?'<br><span class="small">'+esc(w.notes)+'</span>':'')+'</span><button class="btn sm" data-act="gw-bought" data-id="'+esc(w.id)+'">Bought</button><button class="btn sm ghost" data-act="gw-edit" data-id="'+esc(w.id)+'">Edit</button></div>';
+  }).join('');
+  if(total)h+='<div class="small muted center">Total <span class="mono">'+esc(cur)+total.toLocaleString()+'</span></div>';
+  return h;
+}
+function editGWish(id){
+  var w=id?S.gwish[id]:null;
+  D=w?{id:w.id,name:w.name||'',brand:w.brand||'',type:w.type||'Cleanser',price:w.price||'',prio:w.prio||'Medium',notes:w.notes||''}:{name:'',brand:'',type:'Cleanser',price:'',prio:'Medium',notes:''};
+  openSheet(function(){return {title:D.id?'Edit wish':'New wish',body:'<div class="fields"><label class="f">Product<input id="gw-name" value="'+esc(D.name)+'" placeholder="e.g. Salicylic acid cleanser"></label><div class="two"><label class="f">Brand<input id="gw-brand" value="'+esc(D.brand)+'"></label><label class="f">Type<select id="gw-type">'+opts(PTYPES,D.type)+'</select></label></div><div class="two"><label class="f">Price ('+esc(cfg().cur||'₹')+')<input id="gw-price" inputmode="decimal" value="'+esc(D.price)+'"></label><label class="f">Priority<select id="gw-prio">'+opts(PRIO,D.prio)+'</select></label></div><label class="f">Where to buy, notes<textarea id="gw-notes" rows="2">'+esc(D.notes)+'</textarea></label>'+(D.id?'<button class="btn danger" data-act="gw-del">Delete wish</button>':'')+'</div>',foot:'<button class="btn primary" data-act="gw-save">Save</button>'}},{sticky:true});
 }
 function editProd(id){
   var p=id?S.products[id]:null;
@@ -1167,6 +1185,26 @@ ACT.log=function(el){editLog(el.dataset.id)};
 ACT['log-save']=function(){put('groom',{id:D.id,type:$('#l-type').value,date:$('#l-date').value||todayK(),place:$('#l-place').value.trim(),cost:num($('#l-cost').value)||'',notes:$('#l-notes').value.trim(),photo:D.photo,at:Date.now()});closeSheet();toast('Logged')};
 ACT['log-del']=function(el){if(!armed(el))return;del('groom',D.id);closeSheet()};
 ACT.parea=function(el){ui.parea=el.dataset.v;paint()};
+ACT['gw-new']=function(){editGWish(null)};
+ACT['gw-edit']=function(el){editGWish(el.dataset.id)};
+ACT['gw-save']=function(){
+  var n=$('#gw-name').value.trim();if(!n){toast('Name the product');return}
+  var old=D.id?S.gwish[D.id]:null;
+  put('gwish',{id:D.id,name:n,brand:$('#gw-brand').value.trim(),type:$('#gw-type').value,price:num($('#gw-price').value)||'',prio:$('#gw-prio').value,notes:$('#gw-notes').value.trim(),at:old?old.at:Date.now()});
+  closeSheet();toast('Saved');
+};
+ACT['gw-del']=function(el){if(!armed(el))return;del('gwish',D.id);closeSheet()};
+ACT['gw-bought']=function(el){
+  var w=S.gwish[el.dataset.id];if(!w)return;
+  put('products',{name:w.name,brand:w.brand||'',type:w.type,opened:todayK(),pao:PAO[w.type]||'',expires:'',low:false,reaction:'',notes:w.notes||'',at:Date.now()});
+  del('gwish',w.id);toast('Moved to your shelf');
+};
+ACT['gw-from']=function(el){
+  var p=S.products[el.dataset.id];if(!p)return;
+  var dup=list('gwish').some(function(w){return String(w.name).toLowerCase()===String(p.name).toLowerCase()});
+  if(dup){toast('Already on your wishlist');return}
+  put('gwish',{name:p.name,brand:p.brand||'',type:p.type||'Other',price:'',prio:'High',notes:'Reorder',at:Date.now()});toast('Added to your wishlist');
+};
 ACT['ph-new']=function(){editPhoto(null)};
 ACT.ph=function(el){editPhoto(el.dataset.id)};
 ACT['ph-save']=function(){if(!D.photo){toast('Add a photo first');return}put('photos',{id:D.id,area:$('#ph-area').value,date:$('#ph-date').value||todayK(),note:$('#ph-note').value.trim(),photo:D.photo,at:Date.now()});closeSheet();toast('Saved')};
